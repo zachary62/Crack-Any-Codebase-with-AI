@@ -14,6 +14,10 @@ Specifically:
    - `sacrifices`: 3 to 5 one-sentence bullets. What this product gives up vs the dominant competitor.
    - `gains`: 3 to 5 one-sentence bullets. What it gets in return.
    - `why_incumbents_cannot_copy`: a tight one paragraph (2 to 4 sentences). What about the incumbent's existing business would break if they copied this move?
+6. **A tiny picture of the trap** in `diagram`: a small Mermaid flowchart showing the counter-positioning as a chain — the incumbent's strength, why that strength traps them, and this product's opposite move. Think of it like a fork in the road the incumbent can't take. Follow these rules EXACTLY or it breaks and gets dropped:
+   - Only `flowchart LR` with 3-4 nodes joined by plain `-->` arrows.
+   - Put EVERY node label in double quotes: `A["Viral footer"] --> B["Drives growth"]`.
+   - NO subgraphs, no curly braces, no parentheses, no semicolons, no slashes, no colons anywhere in the diagram. Labels under 4 words.
 
 Respond in YAML, fenced. Plain prose, no markdown bold inside the values:
 
@@ -45,6 +49,10 @@ gains:
 why_incumbents_cannot_copy: |
   Two to four sentences. Explain what about the incumbent's existing business
   would break if they copied this move.
+diagram: |
+  flowchart LR
+    A["Viral footer"] --> B["Drives free growth"]
+    B --> C["Cannot go white-label"]
 ```
 
 ## Verdict words to reach for

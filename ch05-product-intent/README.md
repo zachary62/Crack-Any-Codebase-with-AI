@@ -94,7 +94,7 @@ A small SaaS-landing-page aesthetic, but everything stays in one self-contained 
 - **Inter + JetBrains Mono via Google Fonts CDN** for the typography rhythm.
 - **Dark gradient hero** at the top: small "Product Story" eyebrow, product name in a light blue accent, the variant sentence underneath.
 - **Pain card** with red left accent and a "↳ Why this exists" label. When `pain.png` exists, the card renders as a two-column grid: pain text on the left, the comic on the right (stacks on mobile).
-- **Counter-positioning** as two side-by-side cards (sacrifices in amber, gains in green) plus a soft callout for "why incumbents can't copy."
+- **Counter-positioning** as two side-by-side cards (sacrifices in amber, gains in green), a soft callout for "why incumbents can't copy," and a small Mermaid diagram of the trap the incumbent can't escape (rendered client-side; a diagram the model gets wrong is dropped silently rather than shown as an error).
 - **Competitor matrix** as a real table with bold verdicts and muted detail spans; the row for this product is highlighted in light blue.
 - **Surprises and absences** as horizontal scroll-snap card rails (300 px cards), with numbered badges. Blue rails for surprises, amber rails for absences.
 
@@ -112,13 +112,15 @@ Saved as `output/<repo>-story/pain.png` next to the HTML. The HTML embeds it via
 
 Five worked stories on intentionally confusing repos:
 
+Each `index.html` closes the counter-positioning section with a small Mermaid "trap" diagram. Variant sentences are the model's own (a live run; yours will differ):
+
 | Folder | Repo | Variant sentence |
 | ------ | ---- | ---------------- |
-| [`output/nanochat-story/`](output/nanochat-story/) | karpathy/nanochat | "Like building your own ChatGPT, but a minimal codebase that lets one developer train a GPT-2-grade chatbot for under $100." |
-| [`output/dspy-story/`](output/dspy-story/) | stanfordnlp/dspy | "Like giving instructions to ChatGPT, but you write Python code to design multi-step LLM programs, and DSPy auto-tunes the internal prompts." |
-| [`output/tigerbeetle-story/`](output/tigerbeetle-story/) | tigerbeetle/tigerbeetle | "A database for financial transactions that strictly enforces double-entry accounting with extreme speed and data integrity." |
-| [`output/nats-story/`](output/nats-story/) | nats-io/nats-server | "Like Gmail for software services, but messages are not stored — a service must be online and subscribed to receive a message." |
-| [`output/outlines-story/`](output/outlines-story/) | outlines-dev/outlines | "Like ChatGPT, but you tell it exactly what structured text to produce (a Pydantic model, a Python `Literal`), and the output is guaranteed to match." |
+| [`output/nanochat-story/`](output/nanochat-story/) | karpathy/nanochat | "It's ChatGPT, but a minimal Python tool you can run to train your own comparable chatbot from scratch on a GPU for under $50." |
+| [`output/dspy-story/`](output/dspy-story/) | stanfordnlp/dspy | "It's like writing Python programs, but for LLMs — you define the AI's step-by-step logic in code instead of hand-crafting prompts, and DSPy improves the underlying instructions for you." |
+| [`output/tigerbeetle-story/`](output/tigerbeetle-story/) | tigerbeetle/tigerbeetle | "It's like PostgreSQL, but built specifically for financial transactions, with native accounts and transfers that handle debits and credits for accuracy and speed." |
+| [`output/nats-story/`](output/nats-story/) | nats-io/nats-server | "It's Apache Kafka, but designed for operational simplicity and a small footprint — it runs anything from cloud servers to a Raspberry Pi." |
+| [`output/outlines-story/`](output/outlines-story/) | dottxt-ai/outlines | "It's like Gemini, but instead of free-form text it guarantees the model's output follows a structure you pick — a JSON schema, a regex, or a list of choices." |
 
 Open any `index.html` in a browser for the polished version. The matching `index.md` reads fine on the command line and on GitHub.
 

@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>zulip: backend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose', flowchart: { htmlLabels: true } });
+</script>
+<script>
+  window.addEventListener('load', async function () {
+    if (window.hljs) { try { hljs.highlightAll(); } catch (e) {} }
+    if (!window.mermaid) return;
+    var blocks = document.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < blocks.length; i++) {
+      var el = blocks[i], src = el.textContent;
+      try {
+        if ((await mermaid.parse(src, { suppressErrors: true })) === false) { el.remove(); continue; }
+        var out = await mermaid.render('mmd' + i, src);
+        el.innerHTML = out.svg;
+      } catch (e) { el.remove(); }
+    }
+  });
+</script>
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #fff; --text: #101828; --muted: #667085;
+    --faint: #98a2b3; --rule: #e4e7ec; --line: #eef0f3;
+    --accent: #4f46e5; --accent-soft: #eef2ff; --good: #16a34a; --stone: #9aa4b2;
+    --stone-bg: #f2f4f7; --shadow: 0 1px 2px rgba(16,24,40,.05); --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 13.5px; line-height: 1.5; background: var(--bg); color: var(--text); margin: 0;
+    -webkit-font-smoothing: antialiased; }
+  code, .mono { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; }
+  main { max-width: 1280px; margin: 0 auto; padding: 0 24px 56px; }
+
+  .hero { background: radial-gradient(120% 140% at 50% 0%, #1e1b4b 0%, #0f0d2b 70%);
+    color: #fff; padding: 46px 20px 42px; text-align: center; }
+  .hero-inner { max-width: 1120px; margin: 0 auto; }
+  .hero-diagram { margin: 18px 0 4px; }
+  .hero-diagram-cap { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); margin: 0 2px 9px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 7px; color: #a5b4fc;
+    font-size: .68rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+  .eyebrow::before { content: ''; width: 16px; height: 2px; background: #818cf8; border-radius: 2px; }
+  .hero h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -.025em; margin: 12px 0 10px; }
+  .hero .sub { font-size: .94rem; color: #d6d8f5; margin: 0 auto; line-height: 1.6; }
+
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin: 42px 2px 14px; }
+  .sec-n { font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 700; color: var(--accent); }
+  .sec-label { display: flex; align-items: center; gap: 9px; font-size: .68rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .sec-label::before { content: ''; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+  .sec-note { font-size: .8rem; color: var(--faint); }
+  .scroll-hint { margin-left: auto; font-size: .68rem; font-weight: 600; color: var(--faint); }
+
+  /* Friendly "start here" welcome + per-section intros */
+  .intro { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 24px; margin: 30px 0 4px; }
+  .intro-label { font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px; }
+  .intro p { margin: .5em 0; font-size: .96rem; color: #344054; line-height: 1.7; }
+  .intro p:first-child { margin-top: 0; }
+  .intro strong { color: var(--text); }
+  .sec-intro { font-size: .9rem; color: #475467; line-height: 1.6; margin: -4px 2px 12px; }
+  .sec-intro p { margin: 0; }
+
+  .diagram { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; overflow-x: auto; }
+  .diagram pre.mermaid { margin: 0; text-align: center; background: transparent; }
+  .diagram pre.mermaid svg { max-width: 100%; height: auto; }
+
+  .rail { display: flex; gap: 16px; align-items: stretch; overflow-x: auto;
+    scroll-snap-type: x proximity; padding: 4px 2px 18px; margin: 0; list-style: none; }
+  .rail::-webkit-scrollbar { height: 9px; }
+  .rail::-webkit-scrollbar-track { background: var(--line); border-radius: 5px; }
+  .rail::-webkit-scrollbar-thumb { background: #cbd2dc; border-radius: 5px; }
+
+  .scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+  .scroll::-webkit-scrollbar { width: 9px; }
+  .scroll::-webkit-scrollbar-thumb { background: #dce0e7; border-radius: 5px; }
+
+  .card { scroll-snap-align: start; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); box-shadow: var(--shadow); border-top: 3px solid var(--accent);
+    display: flex; flex-direction: column; overflow: hidden; max-height: 74vh; }
+  .card-top { flex-shrink: 0; padding: 14px 18px 12px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #fafaff, #fff); font-weight: 700; font-size: .95rem; line-height: 1.35; }
+  .card-top code { font-size: .82em; }
+  .card-body { padding: 13px 18px 16px; font-size: .84rem; }
+  .card-body p { margin: .5em 0; color: #344054; line-height: 1.6; }
+  .card-body p:first-child { margin-top: 0; }
+  .card-body strong { color: var(--text); }
+  .card-body em { color: var(--muted); }
+  .card-body ul, .card-body ol { margin: .5em 0; padding-left: 1.3em; }
+  .card-body li { margin: .3em 0; color: #344054; line-height: 1.55; }
+
+  .rail.pipe .card { flex: 0 0 400px; width: 400px; }
+  .rail.code .card { flex: 0 0 520px; width: 520px; }
+  .rail.trace .card { flex: 0 0 460px; width: 460px; }
+
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 11px 13px; overflow-x: auto; margin: 10px 0; }
+  pre code { padding: 0; font-size: .73rem; line-height: 1.5; }
+  pre code.hljs { background: transparent; padding: 0; color: #e2e8f0; }
+  code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .84em;
+    background: var(--stone-bg); color: var(--text); padding: 1px 5px; border-radius: 4px; }
+
+  footer { color: var(--faint); font-size: .74rem; text-align: center; margin-top: 44px;
+    padding-top: 18px; border-top: 1px solid var(--rule); }
+  @media (max-width: 560px) { .card { flex-basis: 86vw !important; width: 86vw !important; } }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">Backend</span>
+      <h1>zulip</h1>
+      <p class="sub">Zulip is a real-time, multi-tenant team communication platform designed for asynchronous collaboration and discussion. This codebase, particularly centered around the core <code>POST /json/messages</code> endpoint, reveals an architecture characterized by extensive message processing, granular user permissions, and a deeply integrated data model to support thread-based conversations across organizations.</p>
+    </div>
+  </header>
+  <main>
+    <section class="hero-diagram">
+      <div class="hero-diagram-cap">The request pipeline &mdash; six layers, every time</div>
+      <div class="diagram"><pre class="mermaid">flowchart LR
+    Route[Route<br/>4 files<br/>zproject/urls.py]:::requestPath --> Middleware[Middleware<br/>6 classes<br/>LogRequests]:::sharedChecks
+    Middleware --> Handler[Handler<br/>175 files<br/>@typed_endpoint]:::validateRequest
+    Handler --> Service[Service<br/>44 files<br/>@transaction.atomic]:::businessRule
+    Service --> Database[Database<br/>39 files<br/>models.Model]:::dataIO
+    Database --> Response[Response<br/>1 file<br/>json_success]:::packageResult
+    Response -.-> Async[Async Work<br/>send_event_on_commit]:::asyncWork
+
+    classDef requestPath fill:#ACE8FF,stroke:#29B6F6,stroke-width:2px,color:#000;
+    classDef sharedChecks fill:#B39DDB,stroke:#7E57C2,stroke-width:2px,color:#000;
+    classDef validateRequest fill:#FFE082,stroke:#FFCA28,stroke-width:2px,color:#000;
+    classDef businessRule fill:#C5E1A5,stroke:#8BC34A,stroke-width:2px,color:#000;
+    classDef dataIO fill:#FFAB91,stroke:#FF7043,stroke-width:2px,color:#000;
+    classDef packageResult fill:#B2DFDB,stroke:#4DB6AC,stroke-width:2px,color:#000;
+    classDef asyncWork fill:#F8BBD0,stroke:#F06292,stroke-width:2px,color:#000;</pre></div>
+    </section>
+
+    <div class="sec-head">
+      <span class="sec-n">01</span>
+      <div class="sec-label">The pipeline</div>
+      <div class="sec-note">route · middleware · handler · service · database · response</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section maps the six distinct architectural layers every <code>POST /json/messages</code> request traverses, detailing the file counts per layer and highlighting the extensive processing within the handler (175 files) and service (44 files) layers.</p>
+</div>
+    <ul class="rail pipe">
+      <li class="card">
+        <div class="card-top">Layer 1 — Route: 4 URL files, <code>zproject/urls.py</code> is the central hub</div>
+        <div class="scroll"><div class="card-body"><p>This is where every request begins its journey, finding its matching URL pattern and binding it to a specific Python function. Our team uses standard Django <code>path</code> definitions for most pages, alongside custom <code>rest_path</code> for API endpoints that map HTTP verbs to handler functions. <code>zproject/urls.py</code> acts as the main entry point, including URL configurations from other feature-specific <code>urls.py</code> files like <code>analytics</code> and <code>corporate</code>.</p>
+<p>Shell trick: <code>grep -rn &quot;path&quot; zproject/urls.py | wc -l</code></p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 2 — Middleware: 6 Django middleware classes, <code>LogRequests</code> the standout</div>
+        <div class="scroll"><div class="card-body"><p>After the URL finds its target handler, the request flows through middleware, a series of shared checks and transformations. This layer handles crucial cross-cutting concerns like logging, rate limiting requests, and converting exceptions into JSON responses. Key middleware classes like <code>LogRequests</code> record important request details, <code>JsonErrorHandler</code> gracefully catches exceptions, and <code>RateLimitMiddleware</code> ensures fair resource usage.</p>
+<p>Shell trick: <code>grep -rn &quot;class .*Middleware&quot; zerver/middleware.py | wc -l</code></p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 3 — Handler: 175 handler files, <code>@typed_endpoint</code> is the key decorator</div>
+        <div class="scroll"><div class="card-body"><p>Once middleware has run its shared checks, a specific handler function takes over, focusing on validating the unique parameters of this one request. These functions, often found in <code>zerver/views/</code> and frequently decorated with <code>@typed_endpoint</code>, parse incoming data, perform initial input validation, and enforce permissions specific to the request's context. Examples include <code>json_change_settings</code> for user preferences, <code>send_message_backend</code> for core communication, and <code>get_messages_backend</code> for fetching content.</p>
+<p>Shell trick: <code>grep -rn &quot;@typed_endpoint&quot; zerver/views/ | wc -l</code></p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 4 — Service: 44 files, <code>@transaction.atomic</code> is used widely</div>
+        <div class="scroll"><div class="card-body"><p>The handler then delegates the core business logic to one or more service functions, typically found in <code>zerver/actions/</code>. These <code>do_</code> prefixed functions encapsulate the &quot;what&quot; of our application, orchestrating complex operations and ensuring data integrity. They often use <code>@transaction.atomic(durable=True)</code> to group database operations into a single, all-or-nothing unit. Standout examples include <code>do_send_messages</code> for dispatching messages, <code>do_create_user</code> for new accounts, and <code>do_update_message</code> for content edits.</p>
+<p>Shell trick: <code>grep -rn &quot;def do_&quot; zerver/actions/ | wc -l</code></p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 5 — Database: 39 model files, <code>models.Model</code> is the foundational class</div>
+        <div class="scroll"><div class="card-body"><p>For persistent data changes, service functions interact with the database layer using Django's Object-Relational Mapper (ORM). This layer defines our data schemas through <code>models.Model</code> classes, translating Python objects into database rows and vice versa. It handles the actual reading and writing of information, ensuring our application state is consistently stored. Fundamental models like <code>UserProfile</code>, <code>Message</code>, and <code>Realm</code> dictate how our core data is structured and accessed.</p>
+<p>Shell trick: <code>grep -rn &quot;class .*models.Model&quot; zerver/models/ | wc -l</code></p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 6 — Response: 1 file, <code>json_success</code> is the primary helper</div>
+        <div class="scroll"><div class="card-body"><p>After all processing, the response layer takes the result, formats it, and sends it back to the client. Our <code>zerver/lib/response.py</code> file is dedicated to this, providing helpers like <code>json_success</code> for standard successful API replies, <code>json_unauthorized</code> for authentication failures, and <code>MutableJsonResponse</code> for building the final JSON payload. Crucially, many actions often trigger <code>send_event_on_commit</code> which queues async work that runs <em>after</em> the client receives its response.</p>
+<p>Shell trick: <code>grep -rn &quot;def json_success&quot; zerver/lib/response.py | wc -l</code></p>
+</div></div>
+      </li>
+    </ul>
+    <div class="sec-head">
+      <span class="sec-n">02</span>
+      <div class="sec-label">The code</div>
+      <div class="sec-note">only the layers the team built in a non-standard way</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section focuses on the handler and service layers, which, with 175 and 44 files respectively, demonstrate a highly modularized and complex business logic implementation that warrants close examination.</p>
+</div>
+    <ul class="rail code">
+      <li class="card">
+        <div class="card-top">Layer 1 — Route: novel</div>
+        <div class="scroll"><div class="card-body"><p>Routes here are built on Django's standard <code>urls.py</code> files, but we've added a neat wrapper called <code>rest_path</code> to simplify defining API endpoints. Instead of separate URL entries for each HTTP verb (GET, POST, PATCH), <code>rest_path</code> lets you declare all supported verbs for a single URL path in one go. This makes our <code>urls.py</code> files much cleaner and more explicit for RESTful APIs.</p>
+<pre><code class="language-python"># From analytics/urls.py
+# All of these paths are accessed by either a /json or /api prefix
+v1_api_and_json_patterns = [
+    # get data for the graphs at /stats
+    rest_path(&quot;analytics/chart_data&quot;, GET=get_chart_data),
+    rest_path(&quot;analytics/chart_data/stream/&lt;stream_id&gt;&quot;, GET=get_chart_data_for_stream),
+    rest_path(&quot;analytics/chart_data/realm/&lt;realm_str&gt;&quot;, GET=get_chart_data_for_realm),
+    rest_path(&quot;analytics/chart_data/installation&quot;, GET=get_chart_data_for_installation),
+]
+
+if settings.ZILENCER_ENABLED:
+    from analytics.views.stats import (
+        get_chart_data_for_remote_installation,
+        get_chart_data_for_remote_realm,
+    )
+
+    v1_api_and_json_patterns += [
+        rest_path(
+            &quot;analytics/chart_data/remote/&lt;int:remote_server_id&gt;/installation&quot;,
+            GET=get_chart_data_for_remote_installation,
+        ),
+        rest_path(
+            &quot;analytics/chart_data/remote/&lt;int:remote_server_id&gt;/realm/&lt;int:remote_realm_id&gt;&quot;,
+            GET=get_chart_data_for_remote_realm,
+        ),
+    ]
+
+i18n_urlpatterns += [
+    path(&quot;api/v1/&quot;, include(v1_api_and_json_patterns)),
+    path(&quot;json/&quot;, include(v1_api_and_json_patterns)),
+]
+</code></pre>
+<p>You'll see this <code>rest_path</code> pattern in <code>corporate/urls.py</code>, <code>zilencer/urls.py</code>, and <code>zproject/urls.py</code>.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 2 — Middleware: novel</div>
+        <div class="scroll"><div class="card-body"><p>While we use Django's <code>MiddlewareMixin</code> for our middleware classes, we've heavily customized how authentication and request lifecycle logging work, especially for API endpoints. We have a set of custom decorators in <code>zerver/decorator.py</code> that handle API key validation, user activity logging, and rate limiting <em>before</em> a request even hits our view logic. This allows us to abstract away common concerns and keep our handlers focused.</p>
+<pre><code class="language-python"># From zerver/decorator.py
+def authenticated_rest_api_view(
+    *,
+    webhook_client_name: str | None = None,
+    allow_webhook_access: bool = False,
+    skip_rate_limiting: bool = False,
+    beanstalk_email_decode: bool = False,
+) -&gt; Callable[
+    [Callable[Concatenate[HttpRequest, UserProfile, ParamT], HttpResponse]],
+    Callable[Concatenate[HttpRequest, ParamT], HttpResponse],
+]:
+    # ... (other logic)
+    def _wrapped_view_func(
+        view_func: Callable[Concatenate[HttpRequest, UserProfile, ParamT], HttpResponse],
+    ) -&gt; Callable[Concatenate[HttpRequest, ParamT], HttpResponse]:
+        @csrf_exempt
+        @wraps(view_func)
+        def _wrapped_func_arguments(
+            request: HttpRequest, /, *args: ParamT.args, **kwargs: ParamT.kwargs
+        ) -&gt; HttpResponse:
+            role, api_key = get_basic_credentials(
+                request, beanstalk_email_decode=beanstalk_email_decode
+            )
+
+            # Now we try to do authentication or die
+            try:
+                user_profile = validate_api_key(
+                    request,
+                    role,
+                    api_key,
+                    allow_webhook_access=allow_webhook_access,
+                    client_name=full_webhook_client_name(webhook_client_name),
+                )
+            except JsonableError as e:
+                raise UnauthorizedError(e.msg)
+            try:
+                if not skip_rate_limiting:
+                    rate_limit_user(request, user_profile, domain=&quot;api_by_user&quot;)
+                return view_func(request, user_profile, *args, **kwargs)
+            except Exception as err:
+                # ... (error logging)
+                raise err
+        return _wrapped_func_arguments
+    return _wrapped_view_func
+</code></pre>
+<p>You'll find these decorators used extensively in <code>zerver/views/auth.py</code>, <code>zerver/views/users.py</code>, <code>zerver/views/message_edit.py</code>, and many other handler files.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 3 — Handler: standard</div>
+        <div class="scroll"><div class="card-body"><p>These view functions, found in <code>zerver/views/</code> and <code>corporate/views/</code>, typically receive an <code>HttpRequest</code> and an authenticated <code>UserProfile</code> (thanks to our middleware and decorators). They then delegate the actual business logic to functions in the &quot;Service&quot; layer (<code>zerver/actions/</code>), format any data received, and return an <code>HttpResponse</code>. Follows the standard framework pattern — a thin handler calls a service that makes an ORM call; nothing to read closely.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 4 — Service: novel</div>
+        <div class="scroll"><div class="card-body"><p>Our Service layer, primarily located in <code>zerver/actions/</code> and <code>corporate/lib/</code>, is where the core business logic lives. We have a strong convention of naming these functions <code>do_&lt;action&gt;</code> (e.g., <code>do_create_user</code>, <code>do_send_messages</code>). What's novel here is the consistent and disciplined use of Django's <code>transaction.atomic(durable=True)</code> to ensure data consistency, combined with <code>send_event_on_commit</code> for event publishing. This pattern ensures that any side effects, like real-time updates or notifications, only happen if the entire database transaction is successful.</p>
+<pre><code class="language-python"># From zerver/actions/message_send.py
+@transaction.atomic(savepoint=False)
+def do_send_messages(
+    send_message_requests_maybe_none: Sequence[SendMessageRequest | None],
+    *,
+    mark_as_read: Sequence[int] = [],
+) -&gt; list[SentMessageResult]:
+    # Filter out messages which didn't pass internal_prep_message properly
+    send_message_requests = [
+        send_request
+        for send_request in send_message_requests_maybe_none
+        if send_request is not None
+    ]
+
+    # Save the message receipts in the database
+    # ... (code to bulk create Message objects)
+
+    # Claim attachments in message
+    # ... (code to update message attachments)
+
+    ums: list[UserMessageLite] = []
+    for send_request in send_message_requests:
+        # ... (code to create UserMessageLite objects)
+        ums.extend(user_messages)
+
+        # ... (code to prepare service_queue_events)
+
+    bulk_insert_ums(ums)
+
+    for send_request in send_message_requests:
+        do_widget_post_save_actions(send_request)
+
+    # This next loop is responsible for notifying other parts of the
+    # Zulip system about the messages we just committed to the database:
+    # * Sender automatically follows or unmutes the topic...
+    # * Notifying clients via send_event_on_commit
+    # * Triggering outgoing webhooks via the service event queue.
+    # * Updating the `first_message_id` field for streams...
+    # * Implementing the Welcome Bot reply hack
+    # * Adding links to the embed_links queue for open graph processing.
+    for send_request in send_message_requests:
+        # ... (event sending logic using send_event_on_commit)
+</code></pre>
+<p>You'll see this <code>transaction.atomic(durable=True)</code> and <code>send_event_on_commit</code> pattern in <code>zerver/actions/create_realm.py</code>, <code>zerver/actions/message_edit.py</code>, <code>zerver/actions/muted_users.py</code>, and <code>zerver/actions/user_groups.py</code>.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 5 — Database: standard</div>
+        <div class="scroll"><div class="card-body"><p>Our Database layer uses Django's Object-Relational Mapper (ORM) exclusively. The files in <code>zerver/models/</code> and <code>corporate/models/</code> define our data models as standard <code>models.Model</code> classes, specifying fields, relationships (e.g., <code>ForeignKey</code>, <code>ManyToManyField</code>), unique constraints, and indexes. Follows the standard Django ORM pattern for model definition.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Layer 6 — Response: novel</div>
+        <div class="scroll"><div class="card-body"><p>The Response layer, handled by <code>zerver/lib/response.py</code>, is built around a custom <code>MutableJsonResponse</code> class that extends Django's <code>HttpResponse</code>. This class provides two key benefits: it allows for mutable JSON content that can be modified before serialization, and it uses <code>orjson</code> for highly optimized, lazy JSON serialization. This is a performance-focused customization beyond Django's default <code>JsonResponse</code>.</p>
+<pre><code class="language-python"># From zerver/lib/response.py
+class MutableJsonResponse(HttpResponse):
+    def __init__(
+        self,
+        data: dict[str, Any],
+        *,
+        content_type: str,
+        status: int,
+        exception: Exception | None = None,
+    ) -&gt; None:
+        super().__init__(&quot;&quot;, content_type=content_type, status=status)
+        self._data = data
+        self._needs_serialization = True
+        self.exception = exception
+
+    def get_data(self) -&gt; dict[str, Any]:
+        &quot;&quot;&quot;Get data for this MutableJsonResponse. Calling this method
+        after the response's content has already been serialized
+        will mean the next time the response's content is accessed
+        it will be reserialized because the caller may have mutated
+        the data.&quot;&quot;&quot;
+        self._needs_serialization = True
+        return self._data
+
+    @override
+    @property
+    def content(self) -&gt; Any:
+        &quot;&quot;&quot;Get content for the response. If the content hasn't been
+        overridden by the property setter, it will be the response data
+        serialized lazily to JSON.&quot;&quot;&quot;
+        if self._needs_serialization:
+            self.content = orjson.dumps(
+                self._data,
+                option=orjson.OPT_APPEND_NEWLINE | orjson.OPT_PASSTHROUGH_DATETIME,
+            )
+        return super().content
+
+    @content.setter
+    def content(self, value: Any) -&gt; None:
+        &quot;&quot;&quot;Set the content for the response.&quot;&quot;&quot;
+        content: object = super(MutableJsonResponse, type(self)).content
+        assert isinstance(content, property)
+        content.__set__(self, value)
+        self._needs_serialization = False
+</code></pre>
+<p>This custom response object is used by helper functions like <code>json_success</code> and <code>json_response_from_error</code>, which are widely imported and used across our <code>zerver/views/</code> and <code>corporate/views/</code> handler files.</p>
+</div></div>
+      </li>
+    </ul>
+    <div class="sec-head">
+      <span class="sec-n">03</span>
+      <div class="sec-label">The trace</div>
+      <div class="sec-note">one request, all six layers, and where state changes</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section provides a complete trace of a single message post through all six layers, specifically detailing the point at which new message data is committed to the database and becomes durable.</p>
+</div>
+    <ul class="rail trace">
+      <li class="card">
+        <div class="card-top">The trace</div>
+        <div class="scroll"><div class="card-body"><pre class="mermaid">flowchart LR
+    Route[Route] --> Middleware[Middleware]
+    Middleware --> Handler[Handler]
+    Handler --> Service[Service]
+    Service --> DB_Write_Message(Database: write message)
+    DB_Write_Message --> DB_Write_Attachment(Database: claim attachments)
+    DB_Write_Attachment --> DB_Write_UserMessage(Database: create user messages)
+    DB_Write_UserMessage --> DB_Write_UserTopic(Database: update user topic policy)
+    DB_Write_UserTopic --> DB_Write_Stream(Database: update stream activity)
+    DB_Write_Stream --> RabbitMQ_Events(RabbitMQ: queue events)
+    RabbitMQ_Events -.-> RabbitMQ_Embeds(RabbitMQ: queue embeds)
+    RabbitMQ_Events -.-> RabbitMQ_Notifications(RabbitMQ: queue mobile notifications)
+    RabbitMQ_Events --> Response[Response]
+</pre>
+<ul>
+<li><strong>Layer 1 — Route</strong> <em>locates the <code>send_message_backend</code> function for the API path <code>/json/messages</code></em> (<code>zproject/urls.py:352</code>).</li>
+<li><strong>Layer 2 — Middleware</strong> <em>processes the incoming request, authenticates the user, and prepares the request context for the handler</em>. The <code>TagRequests</code> middleware sets the response format to JSON (<code>zerver/middleware.py:302</code>), <code>SetRemoteAddrFromRealIpHeader</code> sets the client IP (<code>zerver/middleware.py:339</code>), <code>LogRequests</code> starts request timing and identifies the client application (<code>zerver/middleware.py:194</code>). The <code>authenticated_rest_api_view</code> decorator (<code>zerver/decorator.py:649</code>) authenticates the user via their API key in the <code>Authorization</code> header, rate-limits their request, and populates <code>request.user</code> with their <code>UserProfile</code> object.</li>
+<li><strong>Layer 3 — Handler</strong> <em>validates message parameters and delegates to the service layer</em>. The <code>send_message_backend</code> function (<code>zerver/views/message_send.py:126</code>) receives the <code>content</code>, <code>type</code>, <code>to</code>, and <code>topic_name</code> parameters from the API request. It constructs an <code>Addressee</code> object and calls <code>check_message</code> in the service layer to perform core message sending logic.</li>
+<li><strong>Layer 4 — Service</strong> <em>orchestrates message creation, rendering, and notification triggering</em>. The <code>check_message</code> function (<code>zerver/actions/message_send.py:1571</code>) performs extensive validations, renders the message content with Markdown, detecting mentions and alert words, and then passes control to <code>do_send_messages</code>. Inside <code>do_send_messages</code> (<code>zerver/actions/message_send.py:1274</code>):
+<ul>
+<li>The <code>Message</code> object is saved to the database, initiating the first foreign-state boundary (<code>zerver/actions/message_send.py:1278</code>).</li>
+<li>Attachments linked in the message content are claimed, updating their status in the database (<code>zerver/actions/message_send.py:1283</code>).</li>
+<li><code>UserMessage</code> objects are created for each recipient, marking read status, mentions, and alert words. These are bulk-inserted into the database (<code>zerver/actions/message_send.py:1330</code>).</li>
+<li>If the sender's user topic visibility policy should change (e.g., auto-follow a new topic), <code>do_set_user_topic_visibility_policy</code> updates the <code>UserTopic</code> table (<code>zerver/actions/user_topics.py:30</code>).</li>
+<li>For stream messages, the stream's <code>last_activity_time</code> and <code>last_message_id</code> fields are updated (<code>zerver/actions/message_send.py:1418</code>).</li>
+<li>Events for various message-related actions (e.g., new message, mentions, notifications) are queued to RabbitMQ, an external API call (<code>zerver/actions/message_send.py:1385</code>). This queueing happens within a Django <code>transaction.atomic</code> block to ensure consistency. Further asynchronous work (like URL embedding, mobile push notifications, etc.) is triggered via these queued events.</li>
+</ul>
+</li>
+<li><strong>Layer 5 — Database</strong> <em>persists the message and related metadata</em>. This request involves writes to the <code>Message</code>, <code>UserMessage</code>, <code>Attachment</code>, <code>UserTopic</code>, and <code>Stream</code> tables.</li>
+<li><strong>Layer 6 — Response</strong> <em>returns a success message</em>. The <code>json_success</code> helper (<code>zerver/lib/response.py:80</code>) creates a <code>MutableJsonResponse</code> with a 200 HTTP status code, indicating that the message was successfully stored and its processing initiated.</li>
+</ul>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">What this trace reveals</div>
+        <div class="scroll"><div class="card-body"><p>This trace reveals a robust, transaction-aware architecture where the core message sending is an atomic database operation. The 200 OK response signifies that the message is durably stored in the database and that events have been reliably queued to RabbitMQ. Subsequent processing, such as delivering push notifications or fetching URL embeds, is handled asynchronously by background workers, ensuring the API response remains fast and responsive without waiting for potentially slow external services.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Variant — User editing an existing message within the time limit</div>
+        <div class="scroll"><div class="card-body"><p>When a user edits their own message (e.g., <code>PATCH /json/messages/&lt;message_id&gt;</code>), the <code>update_message_backend</code> handler (<code>zerver/views/message_edit.py:108</code>) is invoked. It calls <code>check_update_message</code> and <code>do_update_message</code> (<code>zerver/actions/message_edit.py:596</code>), which validate permissions and the edit time limit. If allowed, the <code>Message</code> object's <code>content</code>, <code>rendered_content</code>, <code>last_edit_time</code>, and <code>edit_history</code> fields are updated in the database, potentially also updating <code>Attachment</code> or <code>UserMessage</code> flags. An <code>update_message</code> event is then sent via RabbitMQ to notify clients of the change.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Variant — User trying to delete a message they don't own</div>
+        <div class="scroll"><div class="card-body"><p>If a user attempts to delete a message (e.g., <code>DELETE /json/messages/&lt;message_id&gt;</code>) that they did not send, the <code>delete_message_backend</code> handler (<code>zerver/views/message_edit.py:206</code>) is reached. This handler calls <code>validate_can_delete_message</code> (<code>zerver/views/message_edit.py:183</code>). Since <code>message.sender != user_profile</code>, this validation fails and raises a <code>JsonableError(_(&quot;You don't have permission to delete this message&quot;))</code>. The <code>JsonErrorHandler</code> middleware (<code>zerver/middleware.py:279</code>) catches this error and returns a 400 JSON response, preventing any database writes or further processing.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Variant — Sending a message with a stream wildcard mention</div>
+        <div class="scroll"><div class="card-body"><p>If a user sends a message to a stream with an <code>@all</code> or <code>@everyone</code> mention (e.g., <code>POST /json/messages</code> with <code>content: &quot;Hello @all!&quot;</code>), the <code>send_message_backend</code> handler (<code>zerver/views/message_send.py:126</code>) and <code>do_send_messages</code> service call proceed as usual. However, during message rendering (<code>zerver/actions/message_send.py:512</code>), the <code>MessageRenderingResult</code> will indicate <code>mentions_stream_wildcard = True</code>. This information is then used by <code>get_recipient_info</code> (<code>zerver/actions/message_send.py:595</code>) to identify all stream subscribers who should receive a notification, and these user IDs are included in the <code>realm_message</code> event sent to RabbitMQ for further processing.</p>
+</div></div>
+      </li>
+    </ul>
+    <footer>Read as six layers &middot; 4 routes &middot; 175 handlers &middot; 44 services &middot; 39 models.</footer>
+  </main>
+</body>
+</html>

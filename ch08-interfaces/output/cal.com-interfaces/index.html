@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cal.com: interfaces</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+</script>
+<script>
+  window.addEventListener('load', async function () {
+    if (window.hljs) { try { hljs.highlightAll(); } catch (e) {} }
+    if (!window.mermaid) return;
+    var blocks = document.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < blocks.length; i++) {
+      var el = blocks[i], src = el.textContent;
+      try {
+        if ((await mermaid.parse(src, { suppressErrors: true })) === false) { el.remove(); continue; }
+        var out = await mermaid.render('mmd' + i, src);
+        el.innerHTML = out.svg;
+      } catch (e) { el.remove(); }
+    }
+  });
+</script>
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #fff; --text: #101828; --muted: #667085;
+    --faint: #98a2b3; --rule: #e4e7ec; --line: #eef0f3;
+    --accent: #0d9488; --accent-soft: #effcf9; --good: #16a34a; --stone: #9aa4b2;
+    --stone-bg: #f2f4f7; --shadow: 0 1px 2px rgba(16,24,40,.05); --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 13.5px; line-height: 1.5; background: var(--bg); color: var(--text); margin: 0;
+    -webkit-font-smoothing: antialiased; }
+  code, .mono { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; }
+  main { max-width: 1280px; margin: 0 auto; padding: 0 24px 56px; }
+
+  .hero { background: radial-gradient(120% 140% at 50% 0%, #0f3d38 0%, #06201d 70%);
+    color: #fff; padding: 46px 20px 42px; text-align: center; }
+  .hero-inner { max-width: 1120px; margin: 0 auto; }
+  .hero-diagram { margin: 18px 0 4px; }
+  .hero-diagram-cap { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); margin: 0 2px 9px; }
+  .groupchart { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px 20px; display: flex; flex-direction: column; gap: 7px; }
+  .gc-row { display: flex; align-items: center; gap: 12px; }
+  .gc-name { flex: 0 0 220px; font-size: .82rem; font-weight: 600; color: var(--text); text-align: right;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gc-track { flex: 1; background: var(--stone-bg); border-radius: 5px; overflow: hidden; }
+  .gc-bar { height: 22px; background: linear-gradient(90deg, #2dd4bf, var(--accent)); border-radius: 5px;
+    color: #fff; font-size: .72rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; min-width: 24px; }
+  @media (max-width: 560px) { .gc-name { flex-basis: 110px; } }
+  .eyebrow { display: inline-flex; align-items: center; gap: 7px; color: #5eead4;
+    font-size: .68rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+  .eyebrow::before { content: ''; width: 16px; height: 2px; background: #2dd4bf; border-radius: 2px; }
+  .hero h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -.025em; margin: 12px 0 10px; }
+  .hero .sub { font-size: .94rem; color: #cbeee7; margin: 0 auto; line-height: 1.6; }
+
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin: 42px 2px 14px; }
+  .sec-n { font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 700; color: var(--accent); }
+  .sec-label { display: flex; align-items: center; gap: 9px; font-size: .68rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .sec-label::before { content: ''; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+  .sec-note { font-size: .8rem; color: var(--faint); }
+  .scroll-hint { margin-left: auto; font-size: .68rem; font-weight: 600; color: var(--faint); }
+
+  /* Friendly "start here" welcome + per-section intros */
+  .intro { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 24px; margin: 30px 0 4px; }
+  .intro-label { font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px; }
+  .intro p { margin: .5em 0; font-size: .96rem; color: #344054; line-height: 1.7; }
+  .intro p:first-child { margin-top: 0; }
+  .intro strong { color: var(--text); }
+  .sec-intro { font-size: .9rem; color: #475467; line-height: 1.6; margin: -4px 2px 12px; }
+  .sec-intro p { margin: 0; }
+
+  .diagram { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; overflow-x: auto; }
+  .diagram pre.mermaid { margin: 0; text-align: center; background: transparent; }
+  .diagram pre.mermaid svg { max-width: 100%; height: auto; }
+
+  .rail { display: flex; gap: 16px; align-items: stretch; overflow-x: auto;
+    scroll-snap-type: x proximity; padding: 4px 2px 18px; margin: 0; list-style: none; }
+  .rail::-webkit-scrollbar { height: 9px; }
+  .rail::-webkit-scrollbar-track { background: var(--line); border-radius: 5px; }
+  .rail::-webkit-scrollbar-thumb { background: #cbd2dc; border-radius: 5px; }
+
+  .scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+  .scroll::-webkit-scrollbar { width: 9px; }
+  .scroll::-webkit-scrollbar-thumb { background: #dce0e7; border-radius: 5px; }
+
+  .card { scroll-snap-align: start; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); box-shadow: var(--shadow); border-top: 3px solid var(--accent);
+    display: flex; flex-direction: column; overflow: hidden; max-height: 72vh; }
+  .card-top { flex-shrink: 0; padding: 14px 18px 12px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #f6fdfb, #fff); font-weight: 700; font-size: .98rem; line-height: 1.35; }
+  .card-top code { font-size: .82em; }
+  .card-body { padding: 13px 18px 16px; font-size: .84rem; }
+  .card-body p { margin: .5em 0; color: #344054; line-height: 1.6; }
+  .card-body p:first-child { margin-top: 0; }
+  .card-body strong { color: var(--text); }
+  .card-body em { color: var(--muted); }
+  .card-body ul, .card-body ol { margin: .5em 0; padding-left: 1.3em; }
+  .card-body li { margin: .28em 0; color: #344054; line-height: 1.5; }
+
+  .rail.menu .card { flex: 0 0 380px; width: 380px; }
+  .rail.tour .card { flex: 0 0 380px; width: 380px; }
+  .rail.flows .card { flex: 0 0 440px; width: 440px; }
+  .rail.seq .card { flex: 0 0 560px; width: 560px; }
+
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .78rem; }
+  th, td { border: 1px solid var(--rule); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--stone-bg); font-size: .7rem; text-transform: uppercase; color: var(--muted); }
+
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 11px 13px; overflow-x: auto; margin: 10px 0; }
+  pre code { padding: 0; font-size: .74rem; line-height: 1.5; }
+  pre code.hljs { background: transparent; padding: 0; color: #e2e8f0; }
+  code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .84em;
+    background: var(--stone-bg); color: var(--text); padding: 1px 5px; border-radius: 4px; }
+
+  footer { color: var(--faint); font-size: .74rem; text-align: center; margin-top: 44px;
+    padding-top: 18px; border-top: 1px solid var(--rule); }
+  @media (max-width: 560px) { .card { flex-basis: 86vw !important; width: 86vw !important; } }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">Interfaces</span>
+      <h1>cal.com</h1>
+      <p class="sub">Cal.com is an extensive scheduling platform primarily characterized by its robust administrative and moderation features, extending far beyond typical calendaring applications to support rigorous community and content governance. The API surface reveals a multi-tenant system with granular access control, designed for managing diverse user interactions across three distinct feature groups.</p>
+    </div>
+  </header>
+  <main>
+    <section class="hero-diagram">
+      <div class="hero-diagram-cap">The API surface at a glance &mdash; 68 endpoints across 3 feature groups</div>
+      <div class="groupchart"><div class="gc-row"><div class="gc-name">Admin &amp; Moderation</div><div class="gc-track"><div class="gc-bar" style="width:100%">27</div></div></div><div class="gc-row"><div class="gc-name">Event Type Management</div><div class="gc-track"><div class="gc-bar" style="width:81%">22</div></div></div><div class="gc-row"><div class="gc-name">Authentication &amp; User Accounts</div><div class="gc-track"><div class="gc-bar" style="width:70%">19</div></div></div></div>
+    </section>
+
+    <div class="sec-head">
+      <span class="sec-n">01</span>
+      <div class="sec-label">Feature menu</div>
+      <div class="sec-note">every endpoint, grouped by feature, biggest first</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section categorizes all exposed API endpoints by their respective feature groups, ordered by size, with each endpoint explicitly tagged for public, authenticated user, or administrative access levels. The most significant finding here is the prevalence of administrative and moderation endpoints, underscoring the platform's governance capabilities.</p>
+</div>
+    <ul class="rail menu">
+      <li class="card">
+        <div class="card-top">Admin &amp; Moderation (27 endpoints)</div>
+        <div class="scroll"><div class="card-body"><p>These endpoints empower platform administrators to manage users, features, and content across the entire system. From user account actions to detailed content monitoring via a watchlist, this is where the platform's operational control resides.</p>
+<ul>
+<li><code>GET /api/trpc/admin.listPaginated</code> — List paginated members (admin)</li>
+<li><code>POST /api/trpc/admin.sendPasswordReset</code> — Send password reset for a user (admin)</li>
+<li><code>POST /api/trpc/admin.lockUserAccount</code> — Lock a user account (admin)</li>
+<li><code>POST /api/trpc/admin.toggleFeatureFlag</code> — Toggle a feature flag (admin)</li>
+<li><code>POST /api/trpc/admin.removeTwoFactor</code> — Remove 2FA for a user (admin)</li>
+<li><code>GET /api/trpc/admin.getSMSLockStateTeamsUsers</code> — Get SMS lock state for teams/users (admin)</li>
+<li><code>POST /api/trpc/admin.setSMSLockState</code> — Set SMS lock state (admin)</li>
+<li><code>POST /api/trpc/admin.createSelfHostedLicense</code> — Create a self-hosted license key (admin)</li>
+<li><code>POST /api/trpc/admin.createCoupon</code> — Create a coupon (admin)</li>
+<li><code>GET /api/trpc/admin.getTeamsForFeature</code> — Get teams associated with a feature (admin)</li>
+<li><code>POST /api/trpc/admin.assignFeatureToTeam</code> — Assign a feature to a team (admin)</li>
+<li><code>POST /api/trpc/admin.unassignFeatureFromTeam</code> — Unassign a feature from a team (admin)</li>
+<li><code>GET /api/trpc/admin.watchlist.list</code> — List watchlist entries (admin)</li>
+<li><code>POST /api/trpc/admin.watchlist.create</code> — Create a watchlist entry (admin)</li>
+<li><code>POST /api/trpc/admin.watchlist.delete</code> — Delete a watchlist entry (admin)</li>
+<li><code>POST /api/trpc/admin.watchlist.bulkDelete</code> — Bulk delete watchlist entries (admin)</li>
+<li><code>GET /api/trpc/admin.watchlist.getDetails</code> — Get details of a watchlist entry (admin)</li>
+<li><code>GET /api/trpc/admin.watchlist.listReports</code> — List reports (admin)</li>
+<li><code>POST /api/trpc/admin.watchlist.dismissReport</code> — Dismiss a report (admin)</li>
+<li><code>POST /api/trpc/admin.watchlist.bulkDismiss</code> — Bulk dismiss reports (admin)</li>
+<li><code>POST /api/trpc/admin.watchlist.addToWatchlist</code> — Add to watchlist (admin)</li>
+<li><code>GET /api/trpc/admin.watchlist.pendingReportsCount</code> — Get count of pending reports (admin)</li>
+<li><code>GET /api/trpc/users.get</code> — Get details of a specific user (admin)</li>
+<li><code>GET /api/trpc/users.list</code> — List all users (admin)</li>
+<li><code>POST /api/trpc/users.add</code> — Add a new user (admin)</li>
+<li><code>POST /api/trpc/users.update</code> — Update an existing user (admin)</li>
+<li><code>POST /api/trpc/users.delete</code> — Delete a user (admin)</li>
+</ul>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Event Type Management (22 endpoints)</div>
+        <div class="scroll"><div class="card-body"><p>This group handles the core scheduling logic, allowing users to define, manage, and configure the types of events they offer for booking. It covers everything from creating a new event type to advanced host assignment and location management.</p>
+<ul>
+<li><code>GET /api/trpc/eventTypes.getByViewer</code> — Get event types visible to the viewer (user)</li>
+<li><code>GET /api/trpc/eventTypes.getUserEventGroups</code> — Get user's event groups (user)</li>
+<li><code>GET /api/trpc/eventTypes.getEventTypesFromGroup</code> — Get event types from a group (user)</li>
+<li><code>GET /api/trpc/eventTypes.getActiveOnOptions</code> — Get active options for event types (user)</li>
+<li><code>GET /api/trpc/eventTypes.list</code> — List all event types for the user (user)</li>
+<li><code>GET /api/trpc/eventTypes.listWithTeam</code> — List event types including team info (user)</li>
+<li><code>GET /api/trpc/eventTypes.get</code> — Get a specific event type (user)</li>
+<li><code>POST /api/trpc/eventTypes.delete</code> — Delete an event type (user, admin/owner role)</li>
+<li><code>GET /api/trpc/eventTypes.bulkEventFetch</code> — Bulk fetch events (user)</li>
+<li><code>POST /api/trpc/eventTypes.bulkUpdateToDefaultLocation</code> — Bulk update event types to default location (user)</li>
+<li><code>GET /api/trpc/eventTypes.getHashedLink</code> — Get a hashed link for an event type (user)</li>
+<li><code>GET /api/trpc/eventTypes.getHashedLinks</code> — Get hashed links for multiple event types (user)</li>
+<li><code>GET /api/trpc/eventTypes.getHostsForAvailability</code> — Get hosts for event type availability (user, admin/owner role)</li>
+<li><code>GET /api/trpc/eventTypes.getHostsForAssignment</code> — Get hosts for event type assignment (user, admin/owner role)</li>
+<li><code>GET /api/trpc/eventTypes.exportHostsForWeights</code> — Export hosts for weight configuration (user, admin/owner role)</li>
+<li><code>GET /api/trpc/eventTypes.getChildrenForAssignment</code> — Get children for event type assignment (user, admin/owner role)</li>
+<li><code>GET /api/trpc/eventTypes.getHostsWithLocationOptions</code> — Get hosts with location options (user, admin/owner role)</li>
+<li><code>POST /api/trpc/eventTypes.massApplyHostLocation</code> — Mass apply host location to event types (user, admin/owner role)</li>
+<li><code>GET /api/trpc/eventTypes.searchTeamMembers</code> — Search team members for an event type (user)</li>
+<li><code>POST /api/trpc/eventTypesHeavy.create</code> — Create an event type (user)</li>
+<li><code>POST /api/trpc/eventTypesHeavy.duplicate</code> — Duplicate an event type (user, admin/owner role)</li>
+<li><code>POST /api/trpc/eventTypesHeavy.update</code> — Update an event type (user, admin/owner role)</li>
+</ul>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Authentication &amp; User Accounts (19 endpoints)</div>
+        <div class="scroll"><div class="card-body"><p>These endpoints cover the full lifecycle of a user's account, from initial registration and setup to login, password management, and two-factor authentication. It also includes pathways for OAuth and managing referrals.</p>
+<ul>
+<li><code>POST /api/auth/forgot-password</code> — Request a password reset email (public)</li>
+<li><code>GET /api/auth/oauth/me</code> — Get current OAuth user profile (public)</li>
+</ul>
+</div></div>
+      </li>
+    </ul>
+    <div class="sec-head">
+      <span class="sec-n">03</span>
+      <div class="sec-label">Action flows</div>
+      <div class="sec-note">one gesture, every lane it touches, in order</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section illustrates the complete sequence of internal service calls and data mutations triggered by a single user gesture, from initial API request to final state change. It reveals the interdependencies and transaction boundaries between the core platform services.</p>
+</div>
+    <ul class="rail flows">
+      <li class="card">
+        <div class="card-top">View Your Scheduled Event Types</div>
+        <div class="scroll"><div class="card-body"><p>This flow covers a simple read operation.</p>
+<p><strong>Flow:</strong> View Your Scheduled Event Types
+<strong>Title:</strong> A user checks the list of event types they offer.
+<strong>Sub:</strong> 4 lanes, 1 data fetch, User waits on Frontend.</p>
+<pre class="mermaid">flowchart LR
+    User --> Frontend --> tRPC --> Database
+</pre>
+<p><strong>Lane 1 · User.</strong> You, the user, open your web browser and navigate to your personal dashboard where you manage all the different types of appointments you offer. With a simple click or page load, your browser sends a request to fetch the content for this page.</p>
+<p><strong>Lane 2 · Frontend.</strong> The web application running in your browser receives the signal to display your event types. It understands that it needs a list of all your configured events, so it constructs a secure call to our backend API to retrieve this data. This initial API request is what kicks off the entire fetching process.</p>
+<p><strong>Lane 3 · tRPC.</strong> This is where our typed API magic happens! The frontend calls a tRPC endpoint, specifically <code>GET /api/trpc/eventTypes.getByViewer</code>. This procedure is designed to securely fetch all event types visible to your currently logged-in user account. It acts as a gateway, validating your request and preparing it for the data storage layer.</p>
+<p><strong>Lane 4 · Database.</strong> Our database is the authoritative source for all your event type configurations. The <code>getByViewerHandler</code> procedure executes a query against <code>prisma</code> to retrieve all event types linked to your user ID, including details like their names, durations, and booking settings. Once this data is retrieved, it's sent back up the chain through tRPC and the Frontend, allowing your dashboard to display your event types. This entire sequence happens synchronously, meaning the user interface waits for this data before fully rendering.</p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Book a 30-Minute Intro Call</div>
+        <div class="scroll"><div class="card-body"><p>Let's switch gears from just looking at data to a more dynamic, write-heavy process: a prospect making a new booking, which involves several critical steps and integrations.</p>
+<p><strong>Flow:</strong> Book a 30-Minute Intro Call
+<strong>Title:</strong> A new prospect schedules an introductory meeting with a team member.
+<strong>Sub:</strong> 6 synchronous lanes + 3 asynchronous lanes, 1 booking, Prospect waits on API.</p>
+<pre class="mermaid">flowchart LR
+    Prospect --> Frontend --> API
+    API --> RateLimit --> Bots --> Booking --> Database
+    Booking -.-> Calendar
+    Booking -.-> Email
+    Booking -.-> Webhooks
+</pre>
+<p><strong>Lane 1 · Prospect.</strong> You're a prospective client looking to book an intro call. You've navigated to the team's booking page, selected a suitable time slot, and meticulously filled out the booking form with your contact details and any necessary questions. When you confidently click &quot;Confirm,&quot; your web browser sends a request to finalize your appointment.</p>
+<p><strong>Lane 2 · Frontend.</strong> The web application captures all your booking information and packages it into a structured request. This bundle includes the chosen event type, the specific date and time, and all the contact information you provided. It then dispatches this data to our core booking API endpoint.</p>
+<p><strong>Lane 3 · API.</strong> Our main booking endpoint, <code>POST /api/book/event</code>, receives your booking request. This endpoint serves as the central orchestrator for creating new appointments, but it first takes a moment to process and parse the incoming data to ensure everything looks correct.</p>
+<p><strong>Lane 4 · RateLimit.</strong> To protect our service from abuse and ensure fair usage for everyone, your request first hits a rate limiter. The <code>checkRateLimitAndThrowError</code> function scrutinizes your IP address, ensuring you're not making too many requests in a short period. If you pass this crucial check, your request proceeds.</p>
+<p><strong>Lane 5 · Bots.</strong> Next, we engage our bot detection mechanisms. This involves <code>checkCfTurnstileToken</code> (if Cloudflare Turnstile is enabled) and a feature flag lookup for the specific event type. These checks are vital to confirm that a genuine human user, not an automated script, is attempting to make a booking, helping us maintain data integrity and prevent spam.</p>
+<p><strong>Lane 6 · Booking.</strong> Now, the core logic takes over! The <code>getRegularBookingService().createBooking</code> method uses all the validated information to construct and create a new <code>Booking</code> record. This is the heart of the booking process, ensuring your appointment is formally recorded and ready to be stored.</p>
+<p><strong>Lane 7 · Database.</strong> A brand new <code>Booking</code> entry is securely persisted in our <code>prisma</code> database, storing all the details of your scheduled event, including who booked it and for when. At this point, the API sends a confirmation back to the frontend, and the spinner on your screen stops, letting you know your booking is successful!</p>
+<p><strong>Lane 8 · Calendar.</strong> <em>Running in the background after you've received your confirmation,</em> the <code>BookingService</code> asynchronously integrates with external calendar providers like Google Calendar or Outlook. It adds the newly created event to the host's calendar, ensuring the appointment automatically appears in their external schedule without delaying your experience.</p>
+<p><strong>Lane 9 · Email.</strong> <em>Also happening asynchronously after the initial response,</em> the <code>BookingService</code> triggers our sophisticated email notification system. Both the host and you, the prospect, receive confirmation emails with all the event details, sent via methods like <code>sendOrganizerRequestReminderEmail</code>.</p>
+<p><strong>Lane 10 · Webhooks.</strong> Finally, <em>and also in the background after the user has received their confirmation,</em> the <code>BookingService</code> dispatches webhooks. If the host has configured any integrations, these webhooks notify external systems (such as CRMs, project management tools, or Slack) about the new booking, keeping all connected services effortlessly in sync.</p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Nightly Calendar Cache Cleanup</div>
+        <div class="scroll"><div class="card-body"><p>Now, let's explore a process that runs entirely behind the scenes, without any direct user interaction: a critical scheduled job.</p>
+<p><strong>Flow:</strong> Nightly Calendar Cache Cleanup
+<strong>Title:</strong> The system automatically cleans up old cached calendar events to optimize performance.
+<strong>Sub:</strong> 4 lanes, 1 cleanup run, No user waits.</p>
+<pre class="mermaid">flowchart LR
+    Cron --> API --> CacheService --> Database
+</pre>
+<p><strong>Lane 1 · Cron.</strong> An external scheduling system (think of it like an alarm clock for our servers), often a Kubernetes cron job or a cloud-based scheduled function, automatically triggers at a set interval, typically once every night. Its sole purpose is to send a simple HTTP request to our API, initiating the cleanup process.</p>
+<p><strong>Lane 2 · API.</strong> Our dedicated cron endpoint, <code>GET /api/cron/calendar-subscriptions-cleanup</code>, receives this scheduled trigger. It first performs a crucial authentication step, verifying a secret API key in the request header to ensure only authorized systems can trigger this sensitive job. If the key is valid, it then dispatches the command to the underlying cleanup service.</p>
+<p><strong>Lane 3 · CacheService.</strong> The <code>CalendarCacheEventService</code> is now in charge, actively working to identify and remove outdated or stale calendar cache entries. It leverages the <code>CalendarCacheEventRepository</code> to interact with the database, querying for records that have exceeded their designated expiry time. This proactive measure keeps our system lean and responsive, ensuring efficient calendar synchronization.</p>
+<p><strong>Lane 4 · Database.</strong> The <code>prisma</code> ORM performs the actual heavy lifting: the deletion of all identified expired cache records from the database. This critical write operation removes unnecessary data, which not only prevents database bloat but also guarantees that our calendar integrations always work with the freshest information. Once the deletions are complete, a success response is sent back to the cron trigger, confirming the job is done.</p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Admin Assigns a Feature to a Team</div>
+        <div class="scroll"><div class="card-body"><p>Finally, let's look at an operation only accessible to administrators, demonstrating how feature flags are managed within a team.</p>
+<p><strong>Flow:</strong> Admin Assigns a Feature to a Team
+<strong>Title:</strong> An administrator enables a new product feature for a specific team.
+<strong>Sub:</strong> 4 lanes, 1 feature assignment, Admin waits on tRPC.</p>
+<pre class="mermaid">flowchart LR
+    Admin --> Frontend --> tRPC --> Database
+</pre>
+<p><strong>Lane 1 · Admin.</strong> As an administrator, you navigate to a specific team's settings page within the application, perhaps to roll out a new product capability. You locate a toggle or button to enable a new feature for that team, and with a click, you activate it. Your web browser then prepares and sends this administrative command to the backend.</p>
+<p><strong>Lane 2 · Frontend.</strong> The administration user interface in your browser captures your action and constructs a tRPC mutation request. This request is carefully bundled with essential information, including the <code>teamId</code> and the specific <code>feature</code> identifier that you intend to assign. It's the UI's job to ensure all necessary data is accurately packaged for the backend.</p>
+<p><strong>Lane 3 · tRPC.</strong> This request hits the <code>POST /api/trpc/admin.assignFeatureToTeam</code> endpoint. Crucially, our <code>authedAdminProcedure</code> first verifies that you are indeed an authenticated administrator with the necessary permissions. Once your authorization is confirmed, the procedure then invokes the <code>assignFeatureToTeam.handler</code> to perform the actual feature assignment.</p>
+<p><strong>Lane 4 · Database.</strong> The handler then interacts with our <code>prisma</code> database to create or update a record, explicitly linking the specified feature to the given <code>teamId</code>. This is a direct write operation, instantly changing the feature flag status for that team across the application. Once this database transaction is complete, a success response is sent back to the frontend, allowing the UI to update and confirm the feature is now active for the team.</p>
+</div></div>
+      </li>
+    </ul>
+    <div class="sec-head">
+      <span class="sec-n">04</span>
+      <div class="sec-label">Endpoint sequence</div>
+      <div class="sec-note">one endpoint, every message inside it</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section provides a granular, message-by-message diagram of the <code>POST /api/recorded-daily-video</code> endpoint, detailing its full request-response lifecycle. Observe the specific payload requirements and the asynchronous processing pipeline for video data ingestion.</p>
+</div>
+    <div class="diagram"><pre class="mermaid">sequenceDiagram
+    participant Daily as Daily.co
+    participant CalAPI as Cal.com Webhook Handler
+    participant CalDB as Cal.com Database
+    participant CalEmail as Cal.com Email Service
+    participant CalWebhooks as Cal.com Webhook Dispatcher
+    participant DailyBatch as Daily.co Batch Processor
+    participant ExtService as External Webhook Service
+
+    Daily->>CalAPI: POST webhook for recording ready
+    CalAPI->>CalAPI: Validate signature and payload
+    CalAPI->>CalDB: Fetch booking reference and details
+    CalAPI->>CalDB: Update booking recorded status
+    CalAPI-->>Daily: 200 OK Response
+
+    Note over CalEmail,DailyBatch: async fan-out
+
+    CalAPI-->>CalEmail: Prepare and send recording emails
+    CalAPI-->>CalWebhooks: Trigger recording ready webhooks
+    CalAPI-->>DailyBatch: Submit transcription job
+    CalEmail-->>ExtService: Send organizer email
+    CalEmail-->>ExtService: Send attendee emails
+    CalWebhooks-->>ExtService: POST recording ready payload
+    DailyBatch->>Daily: Request batch processor job</pre></div>
+    <ul class="rail seq">
+      <li class="card">
+        <div class="card-top">POST /api/recorded-daily-video</div>
+        <div class="scroll"><div class="card-body"><p><strong>Endpoint:</strong> <code>POST /api/recorded-daily-video</code>
+<strong>Title:</strong> Daily.co notifies Cal.com that a video recording is ready.
+<strong>Subtitle:</strong> 7 participants, 12 messages.</p>
+<h3>Messages</h3>
+<ol>
+<li><strong>Daily -&gt; CalAPI</strong>: POST webhook for recording ready (apps/web/app/api/recorded-daily-video/route.ts)</li>
+<li><strong>CalAPI -&gt; CalAPI</strong>: Verify webhook signature (apps/web/app/api/recorded-daily-video/route.ts:42)</li>
+<li><strong>CalAPI -&gt; CalDB</strong>: Fetch booking reference and details (apps/web/lib/daily-webhook/getBookingReference.ts, apps/web/lib/daily-webhook/getBooking.ts)</li>
+<li><strong>CalAPI -&gt; CalDB</strong>: Update booking recorded status (packages/features/bookings/repositories/BookingRepository.ts:1678)</li>
+<li><strong>CalAPI --&gt; Daily</strong>: 200 OK Response (apps/web/app/api/recorded-daily-video/route.ts:121)</li>
+<li><strong>CalAPI --&gt;&gt; CalEmail</strong>: Prepare and send recording emails (packages/emails/daily-video-emails.ts:43)</li>
+<li><strong>CalAPI --&gt;&gt; CalWebhooks</strong>: Trigger recording ready webhooks (apps/web/lib/daily-webhook/triggerWebhooks.ts:71)</li>
+<li><strong>CalAPI --&gt;&gt; DailyBatch</strong>: Submit transcription job (packages/features/conferencing/lib/videoClient.ts:413)</li>
+<li><strong>CalEmail --&gt;&gt; ExtService</strong>: Send organizer email (packages/emails/templates/organizer-daily-video-download-recording-email.ts)</li>
+<li><strong>CalEmail --&gt;&gt; ExtService</strong>: Send attendee emails (packages/emails/templates/attendee-daily-video-download-recording-email.ts)</li>
+<li><strong>CalWebhooks --&gt;&gt; ExtService</strong>: POST recording ready payload (packages/features/webhooks/lib/sendPayload.ts)</li>
+<li><strong>DailyBatch -&gt; Daily</strong>: Request batch processor job (packages/features/conferencing/lib/videoClient.ts:413)</li>
+</ol>
+<h3>Description</h3>
+<p>This endpoint is a webhook handler, meaning it listens for notifications from an external service, in this case, Daily.co, our video conferencing provider. The flow is split into two main parts: first, a quick synchronous response to Daily.co to acknowledge the event, followed by an asynchronous &quot;fan-out&quot; to handle various follow-up actions like sending emails and triggering other internal or external processes. The user (Daily.co, in this context) waits only for the initial database update and the <code>200 OK</code> response.</p>
+<h3>Key takeaway</h3>
+<p>This endpoint exemplifies the &quot;respond fast, fan out later&quot; pattern. The core action (marking the booking as recorded) is completed synchronously, and the user receives a confirmation quickly. However, subsequent tasks like sending emails and triggering other webhooks are handled asynchronously, meaning if one of these background tasks fails, it doesn't prevent the primary operation from succeeding, but also won't roll back the initial database change.</p>
+</div></div>
+      </li>
+    </ul>
+    <footer>Read from 90 route files &middot; 3 feature groups.</footer>
+  </main>
+</body>
+</html>

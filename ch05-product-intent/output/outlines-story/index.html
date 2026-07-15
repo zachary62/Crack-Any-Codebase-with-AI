@@ -7,6 +7,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  // Disable auto-run synchronously so our loop controls rendering (see ch06).
+  if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+</script>
+<script>
+  window.addEventListener('load', async function () {
+    if (!window.mermaid) return;
+    var blocks = document.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < blocks.length; i++) {
+      var el = blocks[i], src = el.textContent;
+      try {
+        // Validate first, so a diagram the model got wrong is dropped silently
+        // (no "Syntax error" box) instead of rendered.
+        if ((await mermaid.parse(src, { suppressErrors: true })) === false) { el.remove(); continue; }
+        var out = await mermaid.render('mmd' + i, src);
+        el.innerHTML = out.svg;
+      } catch (e) { el.remove(); }
+    }
+  });
+</script>
 <style>
   :root {
     --bg: #f8fafc;
@@ -137,6 +158,14 @@
   }
   .callout p { margin: .4em 0 0; color: #422006; font-size: .95rem; line-height: 1.65; }
 
+  /* Counter-positioning diagram */
+  .trap-diagram { margin-top: 16px; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+  .trap-diagram .diagram-label { font-size: .65rem; font-weight: 700; letter-spacing: .14em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+  pre.mermaid { background: transparent; text-align: center; margin: 0; padding: 4px; }
+  pre.mermaid svg { max-width: 100%; height: auto; }
+
   /* Competitor matrix */
   .dim-defs {
     background: var(--surface); border: 1px solid var(--rule);
@@ -247,7 +276,7 @@
     <div class="hero-inner">
       <span class="eyebrow">Product Story</span>
       <h1><span class="name">outlines</span></h1>
-      <p class="sub">It's like using ChatGPT, but you tell it exactly what kind of structured text to produce, such as a Pydantic model for JSON or a Python <code>Literal</code> for choices, and it guarantees the output always matches that structure perfectly.</p>
+      <p class="sub">It's like Google's Gemini, but instead of generating free-form text, Outlines guarantees that large language models (LLMs) produce output that strictly follows a predefined structure, such as a JSON schema, a regular expression, or a list of choices, as they generate each word.</p>
     </div>
   </header>
 
@@ -257,7 +286,7 @@
       <div class="pain-card has-image">
         <div class="pain-label">↳ Why this exists</div>
         <div class="pain-body">
-          <p>Sarah, a junior developer, struggles to automate customer support, as the AI frequently outputs ticket details with missing fields or garbled text. She spends hours writing brittle scripts to manually clean and reformat this inconsistent data, so her real competitor isn't another AI tool, it's her hand-coded string parsing logic.</p>
+          <p>Sarah, a customer support manager, wants AI to categorize urgent emails for fast routing, but the model constantly spits out malformed JSON—a missing bracket, a typo in a category. Her current solution is a manual game of 'spot the error' in a text editor or a Python script with more <code>try-except</code> blocks than actual logic.</p>
           <img class="pain-illustration" src="pain.png" alt="before and after illustration">
         </div>
       </div>
@@ -270,26 +299,34 @@
         <div class="pos-card sacrifices">
           <h3>What it gives up</h3>
           <ul>
-            <li>Outlines requires users to manage their own model deployment and infrastructure for local execution, unlike hosted API services.</li>
-            <li>It does not offer proprietary, state-of-the-art LLMs, relying instead on existing open-source models or third-party APIs.</li>
-            <li>Users must handle multiple API keys or local setups instead of a single, unified billing relationship with one provider.</li>
-            <li>For black-box API models, Outlines' control over generation is limited by the structured output features the specific API exposes.</li>
+            <li>Outlines does not have its own flagship LLM, relying instead on others' models (local or API).</li>
+            <li>It requires users to manage their own infrastructure (e.g., GPUs, model dependencies) when using local models.</li>
+            <li>It might have a steeper initial learning curve for basic text generation compared to simple 'generate text' API calls.</li>
+            <li>It cannot guarantee structured output for all API models, only those that expose sufficient control or through its own <code>dottxt</code> API.</li>
           </ul>
         </div>
         <div class="pos-card gains">
           <h3>What it gets in return</h3>
           <ul>
-            <li>Outlines offers true provider independence, allowing users to switch between many local and API models with the same structured generation API.</li>
-            <li>It provides full, low-level control over the structured generation process for local models by directly masking invalid tokens, enabling advanced constraint types like CFG.</li>
-            <li>By supporting local execution, Outlines enables privacy-sensitive applications where data never leaves the user's controlled environment.</li>
-            <li>It can significantly reduce costs for structured generation by removing token-based billing for the constraint mechanism itself when running locally.</li>
+            <li>Outlines provides guaranteed structural correctness for local models, drastically reducing the need for unreliable post-processing and retry logic.</li>
+            <li>It enables significant cost savings by allowing users to run structured generation on local or self-hosted models, avoiding expensive per-token API fees.</li>
+            <li>It offers flexibility and vendor independence, allowing users to switch models or providers without rewriting their core structured output logic.</li>
+            <li>Advanced users gain greater control and customization options, such as defining custom grammars or logits processors.</li>
+            <li>Its open-source nature provides full transparency and auditability of the structured generation process.</li>
           </ul>
         </div>
       </div>
       <div class="callout">
         <div class="callout-label">Why incumbents can't copy this</div>
-<p>OpenAI's business model relies on charging per-token for access to their proprietary, hosted models. Offering a free, open-source library like Outlines that enables guaranteed structured output for <em>any</em> model (including competitors' or local models) would directly cannibalize their API revenue and devalue their own built-in structured output features. For LangChain, their core architectural paradigm is high-level orchestration and post-hoc parsing. To adopt Outlines' during-generation, token-level control would require a fundamental re-architecture of their framework, disrupting their existing component-based design and value proposition, which is focused on building applications rather than deep generation control.</p>
+<p>OpenAI's dominant business model relies on a proprietary, black-box API with per-token pricing for its powerful LLMs. To copy Outlines' core strength—open-source, local-first structured generation with direct token-level control—OpenAI would need to open-source its frontier models, provide software for local execution with logit access, and fundamentally shift its competitive advantage from a service provider to a library provider. This would directly cannibalize its highly profitable API revenue and expose its core intellectual property, effectively destroying its existing business. Their current structured output features are tightly coupled to their closed API, not designed for open, vendor-agnostic control.</p>
 
+      </div>
+      <div class="trap-diagram">
+        <div class="diagram-label">The trap, in one picture</div>
+        <pre class="mermaid">flowchart LR
+  A["OpenAI's Closed API"] --> B["Drives High Revenue"]
+  B --> C["Cannot Offer Open Local Control"]
+  C --> D["Outlines: Open Local Control"]</pre>
       </div>
     </section>
 
@@ -297,19 +334,19 @@
       <div class="sec-label">Side by Side</div>
       <p class="sec-intro">Four dimensions that actually split the field.</p>
       <ul class="dim-defs">
-        <li><strong>How Output Is Structured</strong>: Does the tool make sure the AI's answer follows a specific format while it's being written, or does it try to fix the answer after it's done?</li>
-        <li><strong>Where Models Run</strong>: Can you use this tool with AI models on your own computer, or only with models running on someone else's online server?</li>
-        <li><strong>Code Is Public</strong>: Can you see and change the core computer program instructions that make the structured output work?</li>
-        <li><strong>Main Use Case</strong>: Is the tool mostly about precisely controlling how the AI writes text, or is it more about building full AI applications that use many tools?</li>
+        <li><strong>Output check time</strong>: When the library makes sure the output matches the desired structure.</li>
+        <li><strong>Supports local LLMs</strong>: Can run with models downloaded to your computer without paying a per-token API fee.</li>
+        <li><strong>Source code open</strong>: Is the code that performs the core structured generation publicly available to read and change?</li>
+        <li><strong>Structure definition</strong>: How you describe the output format you want.</li>
       </ul>
       <div class="matrix-wrap">
         <table class="matrix">
-          <thead><tr><th>Product</th><th>How Output Is Structured</th><th>Where Models Run</th><th>Code Is Public</th><th>Main Use Case</th></tr></thead>
+          <thead><tr><th>Product</th><th>Output check time</th><th>Supports local LLMs</th><th>Source code open</th><th>Structure definition</th></tr></thead>
           <tbody>
-            <tr class="you"><td class="row-head">Outlines (This product)</td><td><span class="verdict">During generation</span><span class="detail">Outlines guarantees structured outputs during generation by masking invalid tokens for local models or using provider-specific features for APIs (README).</span></td><td><span class="verdict">Anywhere</span><span class="detail">Supports local models (Transformers, Llama.cpp) and various API providers (OpenAI, Anthropic, Gemini, Ollama, etc.).</span></td><td><span class="verdict">Open</span><span class="detail">The entire library is open-source under the Apache 2.0 license, allowing full inspection and modification (LICENSE).</span></td><td><span class="verdict">Output control</span><span class="detail">Its core focus is to provide a Pythonic interface for 'structured outputs for LLMs' and 'guaranteed valid structure' directly from the model.</span></td></tr>
-            <tr><td class="row-head">OpenAI API</td><td><span class="verdict">During generation</span><span class="detail">OpenAI offers features like JSON Mode and Function Calling to guide model outputs into specific formats while generating.</span></td><td><span class="verdict">Online-only</span><span class="detail">You must send requests to OpenAI's cloud servers; models cannot be run on your own hardware.</span></td><td><span class="verdict">Closed</span><span class="detail">The internal workings of OpenAI's models and their structured output implementation are proprietary and not publicly visible.</span></td><td><span class="verdict">API service</span><span class="detail">It provides a hosted service to access powerful large language models and their specialized capabilities.</span></td></tr>
-            <tr><td class="row-head">Guidance (Microsoft Research)</td><td><span class="verdict">During generation</span><span class="detail">This library uses a domain-specific language (DSL) to specify output formats and applies token-level masking to enforce them.</span></td><td><span class="verdict">Local-only</span><span class="detail">Primarily designed for direct control over local HuggingFace Transformers models, running on your own hardware.</span></td><td><span class="verdict">Open</span><span class="detail">The entire library is open-source under the MIT license, allowing full inspection and modification.</span></td><td><span class="verdict">Output control</span><span class="detail">Its primary goal is to program LLMs to produce specific, constrained outputs with high precision.</span></td></tr>
-            <tr><td class="row-head">LangChain</td><td><span class="verdict">After generation</span><span class="detail">LangChain typically prompts LLMs to produce structured text (e.g., JSON) and then uses parsers to validate and extract information from the generated response.</span></td><td><span class="verdict">Anywhere</span><span class="detail">It can integrate with both local models (e.g., via HuggingFacePipeline) and various online API models.</span></td><td><span class="verdict">Open</span><span class="detail">The entire library is open-source under the MIT license, allowing full inspection and modification.</span></td><td><span class="verdict">App orchestration</span><span class="detail">It provides a framework for building complex LLM applications by chaining together different components like models, prompts, and tools.</span></td></tr>
+            <tr class="you"><td class="row-head">Outlines</td><td><span class="verdict">During generation</span><span class="detail">Masks invalid tokens at each step, preventing incorrect outputs from ever being generated for local models (using FSMs, <code>outlines/backends/*</code>), and leverages native API capabilities for black-box models.</span></td><td><span class="verdict">Full</span><span class="detail">Integrates directly with HuggingFace transformers, llama.cpp, and MLX-LM to enforce structured generation on user-managed hardware.</span></td><td><span class="verdict">Open</span><span class="detail">The entire library, including core Finite State Machine (FSM) logic, is open-source under the Apache 2.0 license.</span></td><td><span class="verdict">Python types, Regex, CFG</span><span class="detail">Uses standard Python types (Literal, Enum, Pydantic models, list, dict), regular expressions, or Context-Free Grammars as direct inputs to define the desired output structure.</span></td></tr>
+            <tr><td class="row-head">Guidance</td><td><span class="verdict">During generation</span><span class="detail">Directly controls the token generation process for local models by masking invalid tokens based on the specified structure.</span></td><td><span class="verdict">Full</span><span class="detail">Primarily designed for local HuggingFace transformers models, allowing direct control over the generation process.</span></td><td><span class="verdict">Open</span><span class="detail">The library is open-source under the MIT license, allowing full inspection and modification.</span></td><td><span class="verdict">Handlebars syntax</span><span class="detail">Defines output structure and control flow using a custom 'handlebars' templating language integrated into prompts.</span></td></tr>
+            <tr><td class="row-head">OpenAI API (native)</td><td><span class="verdict">During generation</span><span class="detail">The API itself handles the constraint enforcement on the server side, ensuring generated tokens conform to the specified <code>response_format='json_object'</code> or tool call schema.</span></td><td><span class="verdict">None</span><span class="detail">This is an API-only cloud service; it does not run models locally on user hardware.</span></td><td><span class="verdict">Closed</span><span class="detail">The underlying LLM models and their structured generation mechanisms are proprietary and not publicly accessible.</span></td><td><span class="verdict">JSON Schema, tool calls</span><span class="detail">Requires defining output using JSON Schema (for <code>response_format='json_object'</code>) or OpenAPI-like function definitions for tool calling.</span></td></tr>
+            <tr><td class="row-head">Instructor</td><td><span class="verdict">After generation</span><span class="detail">Generates output, then parses it with Pydantic; if validation fails, it provides feedback to the model and retries, looping until valid output is produced.</span></td><td><span class="verdict">None</span><span class="detail">It wraps API calls (primarily OpenAI's) and does not directly execute or constrain local LLMs.</span></td><td><span class="verdict">Open</span><span class="detail">The Python library is open-source under the MIT license.</span></td><td><span class="verdict">Python types (Pydantic)</span><span class="detail">Relies heavily on Pydantic models to define expected output structures, automatically generating prompts with schema instructions.</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -319,12 +356,12 @@
       <div class="sec-label">What the Code Reveals<span class="scroll-hint">scroll →</span></div>
       <p class="sec-intro">Features hiding in the codebase that the README doesn't advertise. Each one is a bet about where the product is going.</p>
       <ul class="card-rail surprises">
-        <li><div class="head"><span class="num">1</span><div class="headline">Domain-specific data types</div></div><div class="where">outlines/types/airports.py, outlines/types/countries.py, outlines/types/locale/us.py, pyproject.toml</div><div class="body">The product anticipates strong demand for highly precise, domain-specific data extraction in niche industries (e.g., travel, logistics), leveraging external data sources for strict data compliance. This targets enterprise use cases requiring validated codes.</div></li>
-        <li><div class="head"><span class="num">2</span><div class="headline">Persistent call caching</div></div><div class="where">outlines/caching.py</div><div class="body">The product anticipates heavy, repetitive usage of LLM calls, making performance optimization and cost-saving through persistent memoization a core value proposition. This improves developer iteration speed and reduces API costs for users.</div></li>
-        <li><div class="head"><span class="num">3</span><div class="headline">Pluggable generation backends</div></div><div class="where">outlines/backends/, pyproject.toml (for <code>llguidance</code>, <code>xgrammar</code> optional dependencies)</div><div class="body">The project hedges against single-backend limitations, betting on a future where different FSM/regex engines offer varying performance or capabilities. This allows rapid adoption of new, optimized constraint engines for different use cases.</div></li>
-        <li><div class="head"><span class="num">4</span><div class="headline">Standardized API error handling</div></div><div class="where">outlines/exceptions.py</div><div class="body">The product commits to enterprise-grade reliability and ease of debugging for LLM integrations, abstracting away vendor-specific API error complexities into a unified, actionable exception hierarchy.</div></li>
-        <li><div class="head"><span class="num">5</span><div class="headline">Generic multimodal input abstraction</div></div><div class="where">outlines/inputs.py, outlines/models/transformers.py#TransformersMultiModal</div><div class="body">The product is proactively building foundational support for future multimodal LLM capabilities, providing a flexible input interface (Image, Audio, Video) even for data types not yet fully integrated with structured output.</div></li>
-        <li><div class="head"><span class="num">6</span><div class="headline">Comprehensive asynchronous API support</div></div><div class="where">outlines/models/ (many <code>Async*</code> files), outlines/models/base.py#AsyncModel</div><div class="body">The project anticipates high-throughput, low-latency LLM applications, positioning itself as a scalable solution for concurrent API interactions, which is critical for real-time services and backend systems.</div></li>
+        <li><div class="head"><span class="num">1</span><div class="headline">Persistent Caching for LLM Calls</div></div><div class="where">src/outlines/caching.py (Cache, CloudpickleDisk, get_cache)</div><div class="body">The product is betting on operational efficiency for production systems where repeated LLM calls can be expensive or slow, prioritizing performance and cost reduction.</div></li>
+        <li><div class="head"><span class="num">2</span><div class="headline">Pluggable Constraint Backends</div></div><div class="where">src/outlines/backends/<strong>init</strong>.py (LLGuidanceBackend, OutlinesCoreBackend, XGrammarBackend)</div><div class="body">This strategy offers multiple highly optimized ways to enforce structured outputs, allowing Outlines to adapt to evolving research in efficient token masking and support diverse model architectures without being locked into a single implementation.</div></li>
+        <li><div class="head"><span class="num">3</span><div class="headline">Extensive Multimodal Input Support</div></div><div class="where">src/outlines/inputs.py (Image, Video, Audio, Chat), src/outlines/models/transformers.py (TransformersMultiModal)</div><div class="body">Outlines is positioned for the future of multimodal LLMs. The detailed support for various media types across multiple model integrations suggests a belief that multimodal inputs will become central to many structured generation tasks.</div></li>
+        <li><div class="head"><span class="num">4</span><div class="headline">Domain-Specific Type Definitions</div></div><div class="where">src/outlines/types/airports.py (IATA Enum), src/outlines/types/countries.py (Alpha2, Alpha3, Numeric, Name, Flag Enums), src/outlines/types/locale/us.py (zip_code, phone_number Regex)</div><div class="body">By providing out-of-the-box support for precise, validated data formats, Outlines targets specific verticals (e.g., travel, logistics, government) where high-precision data extraction is critical, hinting at future domain-specific solutions.</div></li>
+        <li><div class="head"><span class="num">5</span><div class="headline">Python-native Regex DSL with Pydantic Integration</div></div><div class="where">src/outlines/types/dsl.py (Term hierarchy, python_types_to_terms, to_regex), src/outlines/types/<strong>init</strong>.py (pre-defined Regex types like uuid4, ipv4, semver)</div><div class="body">Outlines prioritizes developer experience for complex constraint definition. By enabling developers to compose structured types using Pythonic constructs, it lowers the barrier to entry for highly precise output control, fostering broader adoption.</div></li>
+        <li><div class="head"><span class="num">6</span><div class="headline">Normalized API Error Handling</div></div><div class="where">src/outlines/exceptions.py (APIError hierarchy, normalize_provider_errors context manager)</div><div class="body">This robust error handling abstracts away vendor-specific API failure modes, providing a consistent, actionable interface for developers to build resilient applications. This minimizes the operational burden of managing diverse vendor APIs in production.</div></li>
       </ul>
     </section>
 
@@ -332,12 +369,12 @@
       <div class="sec-label">Missing on Purpose<span class="scroll-hint">scroll →</span></div>
       <p class="sec-intro">Features every competitor ships that this codebase deliberately doesn't. Strategy is choosing what not to do.</p>
       <ul class="card-rail absences">
-        <li><div class="head"><span class="num">1</span><div class="headline">No user account system</div></div><div class="where">No <code>User</code> or <code>Account</code> models, no authentication/authorization logic, no user management APIs or UI components.</div><div class="body">Focuses on core LLM interaction as a developer library, avoiding the immense overhead and security concerns of building and maintaining a multi-tenant user platform. This may limit direct monetization or full-stack integration opportunities.</div></li>
-        <li><div class="head"><span class="num">2</span><div class="headline">No LLM analytics dashboard</div></div><div class="where">No database schemas for logging LLM call metrics (tokens, latency, cost), no aggregation logic or UI components for performance monitoring.</div><div class="body">Keeps the library lean and focused on <em>generation</em>, not <em>observability</em>. It relies on users to integrate with existing external monitoring solutions, which might be a barrier for smaller teams.</div></li>
-        <li><div class="head"><span class="num">3</span><div class="headline">No integrated RAG pipeline</div></div><div class="where">No embedding model interfaces, vector database client integrations, or comprehensive document indexing/retrieval components within the core library. The 'Q&amp;A with Citations' is an example, not a feature.</div><div class="body">Maintains a sharp focus on structured generation, enabling users to integrate their preferred RAG solutions (which is a fast-moving, complex space) rather than dictating a specific retrieval stack.</div></li>
-        <li><div class="head"><span class="num">4</span><div class="headline">No advanced multi-agent orchestration</div></div><div class="where">The 'ReAct Agent' is an example of structured tool use; no generic interfaces for agent communication, shared memory, or complex, multi-step planning across multiple agents.</div><div class="body">Avoids the rapidly evolving complexity of multi-agent systems, focusing on the fundamental capability (reliable function calling/structured output) that underpins agentic behavior, ensuring broad compatibility.</div></li>
-        <li><div class="head"><span class="num">5</span><div class="headline">No dedicated mobile SDKs</div></div><div class="where">Absence of platform-specific codebases (e.g., Swift, Kotlin) or mobile-focused build pipelines. The project is Python-centric.</div><div class="body">Prioritizes deep integration for server-side Python applications, avoiding the high cost and fragmentation of maintaining native mobile development kits. Assumes mobile clients will interact via an API gateway.</div></li>
-        <li><div class="head"><span class="num">6</span><div class="headline">No direct payment processing</div></div><div class="where">No <code>stripe</code> or <code>paypal</code> dependencies, no <code>Payment</code> or <code>Order</code> models, no webhook handlers for payment events.</div><div class="body">Stays within the domain of LLM utility, avoiding the specialized and highly regulated complexities of financial operations. This keeps the product scope focused on AI value, not business operations or e-commerce transactions.</div></li>
+        <li><div class="head"><span class="num">1</span><div class="headline">No Integrated RAG/Vector Database</div></div><div class="where">No dedicated 'vector_db' or 'retrieval' modules, no imports for common vector database clients like Chroma or Pinecone.</div><div class="body">Outlines stays lean and focused exclusively on generation-time control. This avoids the complexity, cost, and operational burden of managing external knowledge bases and retrieval systems, but requires users to integrate a separate RAG solution for knowledge-intensive tasks.</div></li>
+        <li><div class="head"><span class="num">2</span><div class="headline">No Built-in UI or Analytics Dashboard</div></div><div class="where">Only Google Analytics for documentation (<code>mkdocs.yml</code>), no 'dashboards', 'metrics', or 'logs_viewer' modules or associated web framework dependencies.</div><div class="body">The product maintains a developer-tool library focus, prioritizing programmatic control and integration flexibility. This avoids the significant effort of building and maintaining a web-based UI and operational dashboards, but enterprises might need to build custom monitoring around Outlines integrations.</div></li>
+        <li><div class="head"><span class="num">3</span><div class="headline">No Direct Fine-tuning or Model Training</div></div><div class="where">Release notes explicitly state 'The <code>load_lora</code> methods...have been deprecated' and delegates to upstream model libraries; no 'trainer' or 'finetune' modules are present.</div><div class="body">Outlines focuses on inference-time structured generation. It delegates the complex and resource-intensive task of model training and fine-tuning to specialized libraries, limiting customization for users who require model-level behavioral changes.</div></li>
+        <li><div class="head"><span class="num">4</span><div class="headline">No User Authentication or Multi-tenancy</div></div><div class="where">No 'User', 'Tenant', or 'Auth' models/tables, nor any standard authentication or authorization libraries (e.g., Flask-Login, Django-Auth) within the codebase.</div><div class="body">Operating purely as a library avoids the substantial overhead of a multi-user SaaS platform, including user management, access control, and billing infrastructure. However, organizations requiring these features for centralized control must build or integrate them externally.</div></li>
+        <li><div class="head"><span class="num">5</span><div class="headline">No High-Level Agent Orchestration Framework</div></div><div class="where">An 'examples/react_agent.md' exists, but the core library lacks a comprehensive framework (like LangChain or LlamaIndex) for complex reasoning loops or tool orchestration beyond providing structured output for function calls.</div><div class="body">The library maintains a modular design focused on its core strength of structured generation, avoiding the opinionated design choices and rapidly evolving complexity of a full-stack agent framework. Users building complex autonomous agents must integrate Outlines with another agent library.</div></li>
+        <li><div class="head"><span class="num">6</span><div class="headline">No Built-in Content Moderation</div></div><div class="where">Error handling for OpenAI models (<code>openai.py</code>) includes checking for <code>message.refusal</code> but there are no custom 'moderation_filter' or 'safety_check' modules, indicating reliance on upstream models.</div><div class="body">Outlines delegates the complex, sensitive, and constantly evolving challenge of content moderation to underlying LLM providers or dedicated third-party services. This avoids the significant ethical, legal, and engineering burden of maintaining its own safety systems, but users are entirely reliant on external mechanisms.</div></li>
       </ul>
     </section>
 

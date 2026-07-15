@@ -101,9 +101,12 @@ def call_llm(prompt: str) -> str:
 
     elif provider == "openai":
         from openai import OpenAI
+        # GPT-5-class models (the default here) reject the old `max_tokens` on
+        # chat.completions and require `max_completion_tokens`. Every current
+        # OpenAI chat model accepts the newer name, so we always use it.
         resp = OpenAI().chat.completions.create(
             model=model,
-            max_tokens=max_out,
+            max_completion_tokens=max_out,
             messages=[{"role": "user", "content": prompt}],
         )
         text = resp.choices[0].message.content

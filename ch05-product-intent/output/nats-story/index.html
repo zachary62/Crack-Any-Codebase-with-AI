@@ -7,6 +7,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  // Disable auto-run synchronously so our loop controls rendering (see ch06).
+  if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+</script>
+<script>
+  window.addEventListener('load', async function () {
+    if (!window.mermaid) return;
+    var blocks = document.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < blocks.length; i++) {
+      var el = blocks[i], src = el.textContent;
+      try {
+        // Validate first, so a diagram the model got wrong is dropped silently
+        // (no "Syntax error" box) instead of rendered.
+        if ((await mermaid.parse(src, { suppressErrors: true })) === false) { el.remove(); continue; }
+        var out = await mermaid.render('mmd' + i, src);
+        el.innerHTML = out.svg;
+      } catch (e) { el.remove(); }
+    }
+  });
+</script>
 <style>
   :root {
     --bg: #f8fafc;
@@ -137,6 +158,14 @@
   }
   .callout p { margin: .4em 0 0; color: #422006; font-size: .95rem; line-height: 1.65; }
 
+  /* Counter-positioning diagram */
+  .trap-diagram { margin-top: 16px; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+  .trap-diagram .diagram-label { font-size: .65rem; font-weight: 700; letter-spacing: .14em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+  pre.mermaid { background: transparent; text-align: center; margin: 0; padding: 4px; }
+  pre.mermaid svg { max-width: 100%; height: auto; }
+
   /* Competitor matrix */
   .dim-defs {
     background: var(--surface); border: 1px solid var(--rule);
@@ -247,7 +276,7 @@
     <div class="hero-inner">
       <span class="eyebrow">Product Story</span>
       <h1><span class="name">nats</span></h1>
-      <p class="sub">It's like Gmail for software services, but messages are not stored, so a service must be online and subscribed to a subject to receive a message.</p>
+      <p class="sub">It's Apache Kafka, a data streaming backend developers use for real-time data, but designed for operational simplicity and a small resource footprint, allowing it to manage both temporary and durable data streams on anything from cloud servers to a Raspberry Pi.</p>
     </div>
   </header>
 
@@ -257,7 +286,7 @@
       <div class="pain-card has-image">
         <div class="pain-label">↳ Why this exists</div>
         <div class="pain-body">
-          <p>Priya, a developer building an e-commerce site, moves her <code>inventory</code> program to a new server, and suddenly the <code>shopping-cart</code>, <code>checkout</code>, and <code>shipping</code> programs all crash. Her real competitor isn't another messaging tool; it's the tangled web of hard-coded IP addresses and port numbers she now has to hunt down and fix in every single program.</p>
+          <p>Devon, a software engineer, sighs, knowing they need to connect their new order processing service to three downstream inventory systems. Each connection means writing entirely new API client code, handling unique retry policies, and hoping a single system doesn't bog down the others, where the real competitor is a growing folder of hand-rolled communication libraries.</p>
           <img class="pain-illustration" src="pain.png" alt="before and after illustration">
         </div>
       </div>
@@ -270,26 +299,33 @@
         <div class="pos-card sacrifices">
           <h3>What it gives up</h3>
           <ul>
-            <li>NATS gives up being a &quot;system of record&quot; by default, which is the core identity of systems like Kafka.</li>
-            <li>It maintains two distinct messaging models (core pub/sub and JetStream streaming), which can add a slight learning curve.</li>
-            <li>It forgoes the vast ecosystem of tools built specifically for Kafka's log-centric architecture, like Kafka Connect.</li>
-            <li>Core NATS offers &quot;at-most-once&quot; delivery, sacrificing the default &quot;at-least-once&quot; guarantee that durable systems provide out of the box.</li>
+            <li>NATS sacrifices the massive, high-throughput batch processing capabilities that Apache Kafka excels at for large-scale data pipelines.</li>
+            <li>It gives up the strict guarantees of ordered delivery across a high number of partitions that Kafka enforces by default.</li>
+            <li>NATS's core Pub/Sub model is memory-first, meaning strict message durability isn't enabled by default and requires JetStream.</li>
+            <li>It does not natively include the extensive ecosystem of deeply integrated stream processing tools (like Flink or Spark Streaming) that exist for Kafka.</li>
           </ul>
         </div>
         <div class="pos-card gains">
           <h3>What it gets in return</h3>
           <ul>
-            <li>It gains extreme operational simplicity by being a single, dependency-free binary that can run almost anywhere.</li>
-            <li>It serves high-performance, low-latency use cases where Kafka's mandatory persistence would be unnecessary overhead.</li>
-            <li>It offers a single system that scales from simple messaging to durable streaming, reducing architectural complexity.</li>
-            <li>It has a native, decentralized multi-tenancy model built for modern distributed systems, avoiding complex ACL management.</li>
+            <li>NATS gains extreme simplicity in deployment and operation, functioning as a single binary with minimal external dependencies.</li>
+            <li>It offers superior performance for real-time, low-latency messaging across various patterns (Pub/Sub, Request/Reply, Queues) in its core.</li>
+            <li>NATS is exceptionally resource-efficient, enabling deployment on a wide spectrum of hardware, including tiny edge devices like a Raspberry Pi.</li>
+            <li>It provides a more native and direct Request/Reply messaging pattern, which can be complex to implement efficiently in log-centric systems.</li>
           </ul>
         </div>
       </div>
       <div class="callout">
         <div class="callout-label">Why incumbents can't copy this</div>
-<p>Kafka's identity and ecosystem are built entirely around the durable, replayable log. Offering a simple, non-durable mode would undermine its core value proposition as a system of record and cannibalize its own positioning. Architecturally, adding a separate transient messaging path would be like building a second product, destroying the elegance of its &quot;everything is a log&quot; design. Similarly, adopting NATS's decentralized security model would require a fundamental break from centralized ACLs, invalidating years of community tooling and operational knowledge.</p>
+<p>Kafka cannot simply &quot;become simpler&quot; or &quot;run on a Raspberry Pi&quot; without fundamentally overhauling its core architecture and JVM dependency. Its existing business model and value proposition are built on complex, high-throughput, horizontally scalable distributed systems designed for massive data ingestion and processing. Attempting to match NATS's simplicity and lightweight footprint would require abandoning its core engineering philosophy and rewriting significant portions of its codebase, alienating its established user base and destroying its architectural advantages in its primary market. Redis, while lightweight, is fundamentally a key-value store with streaming capabilities, and its single-threaded nature in core operations limits its ability to achieve NATS's high concurrency in diverse messaging patterns without significant architectural changes.</p>
 
+      </div>
+      <div class="trap-diagram">
+        <div class="diagram-label">The trap, in one picture</div>
+        <pre class="mermaid">flowchart LR
+  A["Complex distributed design"] --> B["Requires heavy resources"]
+  B --> C["Cannot easily run on edge"]
+  C --> D["NATS: Single Go binary"]</pre>
       </div>
     </section>
 
@@ -297,19 +333,19 @@
       <div class="sec-label">Side by Side</div>
       <p class="sec-intro">Four dimensions that actually split the field.</p>
       <ul class="dim-defs">
-        <li><strong>Default Messaging Behavior</strong>: Is the system primarily a simple message passer or a durable, replayable log out of the box?</li>
-        <li><strong>Secure Data Sharing</strong>: Can you securely and dynamically share specific data streams between different teams or tenants without a central admin?</li>
-        <li><strong>Running the System</strong>: Can you run the core system from a single file without external dependencies like Zookeeper or a language runtime?</li>
-        <li><strong>Persistence is Optional</strong>: Can you run the system in a high-performance, non-persistent mode and add durability later?</li>
+        <li><strong>Easy start</strong>: How simple it is to get a basic version running on one computer.</li>
+        <li><strong>Always saves messages</strong>: Whether it reliably saves your messages to disk, even if the system crashes.</li>
+        <li><strong>Tiny computer friendly</strong>: If it can run effectively on tiny computers like a Raspberry Pi or at the edge of a network.</li>
+        <li><strong>Many message styles</strong>: How many different ways you can send and receive messages, beyond just one-to-many broadcasts.</li>
       </ul>
       <div class="matrix-wrap">
         <table class="matrix">
-          <thead><tr><th>Product</th><th>Default Messaging Behavior</th><th>Secure Data Sharing</th><th>Running the System</th><th>Persistence is Optional</th></tr></thead>
+          <thead><tr><th>Product</th><th>Easy start</th><th>Always saves messages</th><th>Tiny computer friendly</th><th>Many message styles</th></tr></thead>
           <tbody>
-            <tr class="you"><td class="row-head">NATS</td><td><span class="verdict">Simple by default</span><span class="detail">Core NATS is a fast, fire-and-forget message passer; the more complex JetStream log system is opt-in via a config flag (-js).</span></td><td><span class="verdict">Built-in</span><span class="detail">NATS has a decentralized security model of accounts, with stream and service imports/exports managed by JWTs (server/accounts.go).</span></td><td><span class="verdict">One file</span><span class="detail">The nats-server is a single Go binary with no external dependencies needed to run (main.go).</span></td><td><span class="verdict">Yes</span><span class="detail">Persistence is provided by the JetStream subsystem, which is disabled by default and can be enabled with a flag (-js) and configured in server/jetstream.go.</span></td></tr>
-            <tr><td class="row-head">Apache Kafka</td><td><span class="verdict">Durable log only</span><span class="detail">Kafka's core abstraction is a durable, replayable log; it does not have a simple, transient messaging mode.</span></td><td><span class="verdict">Via ACLs</span><span class="detail">Kafka uses centralized Access Control Lists for authorization, which are powerful but less tailored for dynamic, cross-tenant sharing.</span></td><td><span class="verdict">Requires framework</span><span class="detail">Kafka is a JVM application and historically required a separate Zookeeper cluster for coordination, making it complex to deploy.</span></td><td><span class="verdict">No</span><span class="detail">Persistence is fundamental to Kafka's design as a distributed log; it cannot be disabled.</span></td></tr>
-            <tr><td class="row-head">RabbitMQ</td><td><span class="verdict">Message queue</span><span class="detail">RabbitMQ is a traditional message broker that routes messages to ephemeral or durable queues, which are then consumed.</span></td><td><span class="verdict">Via vhosts</span><span class="detail">Uses virtual hosts for multi-tenancy, which provides strong isolation but not the granular, dynamic data sharing of NATS imports/exports.</span></td><td><span class="verdict">Requires framework</span><span class="detail">RabbitMQ requires an Erlang/OTP runtime environment, which is an external dependency that must be installed and managed.</span></td><td><span class="verdict">Partial</span><span class="detail">Messages can be marked as transient or persistent, but the model is a queue, not a replayable log like JetStream.</span></td></tr>
-            <tr><td class="row-head">Redis</td><td><span class="verdict">Simple by default</span><span class="detail">Redis Pub/Sub is a simple fire-and-forget system; Redis Streams provides a log model, but it's a separate command set.</span></td><td><span class="verdict">Via ACLs</span><span class="detail">Redis provides an ACL system for user permissions, but it lacks the decentralized, policy-based import/export model of NATS.</span></td><td><span class="verdict">One file</span><span class="detail">Like NATS, Redis is a single binary with no external runtime dependencies, known for its operational simplicity.</span></td><td><span class="verdict">Yes</span><span class="detail">Core Redis Pub/Sub has no persistence guarantees; persistence for the entire dataset is configured separately via RDB or AOF.</span></td></tr>
+            <tr class="you"><td class="row-head">NATS (with JetStream)</td><td><span class="verdict">Very Easy</span><span class="detail">Starts as a single binary, no external dependencies needed for basic operation.</span></td><td><span class="verdict">Yes</span><span class="detail">JetStream adds configurable file or memory-backed persistence with strong guarantees.</span></td><td><span class="verdict">Yes</span><span class="detail">Designed to run anywhere, from large clouds to a Raspberry Pi or other edge devices.</span></td><td><span class="verdict">Full</span><span class="detail">Supports Pub/Sub, Request/Reply, Queueing, and persistent streaming with JetStream.</span></td></tr>
+            <tr><td class="row-head">Apache Kafka</td><td><span class="verdict">Hard</span><span class="detail">Requires a complex distributed setup including Zookeeper or Kraft for metadata, and a JVM runtime.</span></td><td><span class="verdict">Yes</span><span class="detail">Core design is a fault-tolerant, replicated distributed commit log for high durability.</span></td><td><span class="verdict">No</span><span class="detail">Its JVM overhead and distributed nature make it unsuitable for small, resource-constrained devices.</span></td><td><span class="verdict">Limited</span><span class="detail">Primarily an append-only commit log; other patterns like Request/Reply are typically built as layers on top.</span></td></tr>
+            <tr><td class="row-head">RabbitMQ</td><td><span class="verdict">Medium</span><span class="detail">Runs on the Erlang runtime; setting up a single node is straightforward, but clustering is more involved.</span></td><td><span class="verdict">Yes</span><span class="detail">Messages can be persisted to disk, and various acknowledgment mechanisms ensure reliable delivery.</span></td><td><span class="verdict">Partial</span><span class="detail">Can run on smaller servers than Kafka, but its Erlang runtime still has a noticeable footprint compared to NATS's single Go binary.</span></td><td><span class="verdict">Full</span><span class="detail">Supports a wide range of AMQP messaging patterns including fanout, topics, direct exchanges, and remote procedure calls (RPC).</span></td></tr>
+            <tr><td class="row-head">Redis Streams</td><td><span class="verdict">Very Easy</span><span class="detail">A single Redis instance can run with minimal setup, often embedded within existing Redis deployments.</span></td><td><span class="verdict">Yes</span><span class="detail">Offers append-only log persistence with configurable RDB snapshots or AOF journaling.</span></td><td><span class="verdict">Yes</span><span class="detail">A single Redis server is lightweight and can run on modest hardware or embedded systems.</span></td><td><span class="verdict">Limited</span><span class="detail">Designed around a log-based stream with native consumer groups, but other advanced messaging patterns require custom application logic.</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -319,12 +355,13 @@
       <div class="sec-label">What the Code Reveals<span class="scroll-hint">scroll →</span></div>
       <p class="sec-intro">Features hiding in the codebase that the README doesn't advertise. Each one is a bet about where the product is going.</p>
       <ul class="card-rail surprises">
-        <li><div class="head"><span class="num">1</span><div class="headline">Built-in service latency tracking</div></div><div class="where">server/accounts.go: serviceLatency struct, TrackServiceExportWithSampling()</div><div class="body">NATS is not just a transport layer, but an observable service fabric. The bet is that as request-reply workloads become more critical, built-in latency metrics will be a key differentiator against simpler message queues.</div></li>
-        <li><div class="head"><span class="num">2</span><div class="headline">Weighted subject mapping for traffic shaping</div></div><div class="where">server/accounts.go: AddWeightedMappings(), mapping struct</div><div class="body">The product is moving towards service mesh territory, managing not just message delivery but also routing logic. This enables canary deployments and A/B testing at the messaging layer, reducing client-side complexity.</div></li>
-        <li><div class="head"><span class="num">3</span><div class="headline">Leaf node architecture for edge computing</div></div><div class="where">server/client.go: const LEAF, server/leafnode.go</div><div class="body">The network edge is the next frontier for distributed systems. NATS is betting that a dedicated, secure protocol for connecting edge clusters to a central hub, with awareness of the interest graph, is critical infrastructure.</div></li>
-        <li><div class="head"><span class="num">4</span><div class="headline">TPM support for hardware-backed encryption</div></div><div class="where">server/jetstream.go: func (s *Server) initJetStreamEncryption()</div><div class="body">For high-security environments, software-only key management is insufficient. The bet is that hardware-level security for JetStream's at-rest encryption will be a requirement for adoption in finance, government, and critical IoT.</div></li>
-        <li><div class="head"><span class="num">5</span><div class="headline">Latency-aware data compression</div></div><div class="where">server/client.go: c.out.cw *s2.Writer, server/route.go: CompressionS2Auto</div><div class="body">Network bandwidth is not always cheap or plentiful, especially at the edge or between data centers. A smart, built-in compression that adapts to network conditions is a bet on optimizing for real-world, heterogeneous network environments.</div></li>
-        <li><div class="head"><span class="num">6</span><div class="headline">Full-featured administration via internal API</div></div><div class="where">server/jetstream_api.go: JSApiStreamSnapshot, JSApiStreamRestore, JSApiLeaderStepDown</div><div class="body">Cloud-native systems require automation at every level. The bet is that operators will prefer managing infrastructure using the same NATS protocol they use for applications, enabling GitOps-style management and deeper integration.</div></li>
+        <li><div class="head"><span class="num">1</span><div class="headline">Advanced Message Batching</div></div><div class="where">server/jetstream_batching.go (atomicBatch, fastBatch types, newAtomicBatch, newFastBatch functions)</div><div class="body">The product is prioritizing high-throughput, reliable messaging patterns, allowing applications to optimize network and disk I/O by sending messages in efficient batches, crucial for performance-sensitive use cases.</div></li>
+        <li><div class="head"><span class="num">2</span><div class="headline">Hardware-Backed Encryption (TPM)</div></div><div class="where">server/jetstream.go (initJetStreamEncryption, tpm.LoadJetStreamEncryptionKeyFromTPM)</div><div class="body">NATS is targeting highly secure, enterprise-grade environments where data-at-rest encryption keys require protection beyond software-only solutions, leveraging hardware security modules like TPMs.</div></li>
+        <li><div class="head"><span class="num">3</span><div class="headline">In-Service Cluster Management (Migration, Reassignment)</div></div><div class="where">server/jetstream_cluster.go (runStreamMigration, remapStreamAssignment, processRemovePeer, selectScaleDownPeers functions)</div><div class="body">The system is designed for extreme operational resilience and elasticity, enabling seamless scaling, rebalancing, and self-healing of distributed JetStream resources without manual intervention or downtime.</div></li>
+        <li><div class="head"><span class="num">4</span><div class="headline">Granular Resource Tiers per Account</div></div><div class="where">server/jetstream.go (JetStreamAccountLimits, JetStreamTier, jsaUsage types)</div><div class="body">NATS is betting on multi-tenant or departmental usage patterns where fine-grained control over resource allocation (memory, storage, streams, consumers) per account is essential for fair usage and preventing resource starvation.</div></li>
+        <li><div class="head"><span class="num">5</span><div class="headline">Runtime Protocol Negotiation &amp; Dynamic Info Updates</div></div><div class="where">server/server.go (RouteProtoInfo, ClientProtoInfo constants, sendAsyncInfoToClients function)</div><div class="body">The product aims for maximum client and server compatibility across versions and dynamic adaptability in network topology, allowing older clients/servers to connect while enabling newer features (like LDM awareness, updated URLs) to be communicated on the fly.</div></li>
+        <li><div class="head"><span class="num">6</span><div class="headline">Smart Internal Traffic Compression</div></div><div class="where">server/server.go (selectS2AutoModeBasedOnRTT function, CompressionS2Auto mode), server/jetstream_cluster.go (s2.Encode, s2.Decode calls)</div><div class="body">NATS is optimizing for bandwidth-constrained or high-latency clustered deployments, using adaptive compression for internal server-to-server communication, intelligently balancing CPU usage with network throughput based on RTT.</div></li>
+        <li><div class="head"><span class="num">7</span><div class="headline">Custom Internal Request Queues for Backpressure</div></div><div class="where">server/server.go (jsAPIRoutedReqs, delayedAPIResponses, ipQueue type and usage)</div><div class="body">NATS prioritizes stability and graceful degradation under heavy load by implementing its own internal queuing mechanisms, preventing API handler goroutines from blocking and propagating backpressure, ensuring the control plane remains responsive even during spikes.</div></li>
       </ul>
     </section>
 
@@ -332,11 +369,11 @@
       <div class="sec-label">Missing on Purpose<span class="scroll-hint">scroll →</span></div>
       <p class="sec-intro">Features every competitor ships that this codebase deliberately doesn't. Strategy is choosing what not to do.</p>
       <ul class="card-rail absences">
-        <li><div class="head"><span class="num">1</span><div class="headline">No plugin architecture</div></div><div class="where">Features like MQTT and websockets are compiled in; no <code>plugins/</code> directory or dynamic loading code.</div><div class="body">Prioritizes performance, operational simplicity, and reliability over ultimate extensibility. A single binary is easy to deploy and manage, avoiding dependency hell with plugins. Risk: The core team becomes a bottleneck for new protocols.</div></li>
-        <li><div class="head"><span class="num">2</span><div class="headline">No built-in web dashboard</div></div><div class="where">server/server.go defines HTTP endpoints like /varz and /connz which serve JSON, but no bundled UI.</div><div class="body">Commits to being a component in a larger observability stack, not an all-in-one solution. This avoids the cost of maintaining a complex UI and encourages integration with best-of-breed tools like Grafana. Risk: Higher barrier to entry for users wanting a simple, out-of-the-box visualization tool.</div></li>
-        <li><div class="head"><span class="num">3</span><div class="headline">No native SSO or federated identity support</div></div><div class="where">Auth logic in server/accounts.go and server/client.go is built on NKeys, JWTs, and tokens, with no mention of LDAP, OIDC, or SAML.</div><div class="body">The security model is self-contained, decentralized, and built on modern cryptography, fitting its distributed systems target. This simplifies deployment in isolated environments. Risk: More integration work for enterprises needing to connect with existing identity providers.</div></li>
-        <li><div class="head"><span class="num">4</span><div class="headline">No external database for persistence</div></div><div class="where">Core NATS is in-memory; JetStream uses its own log-structured file store in <code>StoreDir</code>, with no database connectors.</div><div class="body">Ensures maximum performance for core messaging by avoiding disk I/O. It positions JetStream as the single, opinionated persistence layer, preventing users from using potentially slow or misconfigured backends. Risk: Less flexibility for users wanting to leverage existing databases.</div></li>
-        <li><div class="head"><span class="num">5</span><div class="headline">No multi-message distributed transactions</div></div><div class="where">No BeginTx/Commit/Rollback commands in the protocol; JetStream's <code>AllowAtomicPublish</code> is for batch atomicity, not general transactions.</div><div class="body">Keeps the server simple and fast by avoiding the complexity and performance overhead of two-phase commit protocols. This pushes transactional logic to the application layer. Risk: More complex for developers who need strict transactional guarantees across multiple, independent messages.</div></li>
+        <li><div class="head"><span class="num">1</span><div class="headline">No Rich User-Facing Dashboards</div></div><div class="where">Monitoring endpoints like /varz, /connz, /jsz return raw JSON or text; no <code>html/template</code> or asset rendering logic for full dashboards.</div><div class="body">Commits to providing low-level, API-first monitoring data that users can integrate into their existing observability stacks (Grafana, Prometheus). Avoids the significant development and maintenance burden of a built-in, opinionated UI. Risk: Higher barrier to entry for users who prefer out-of-the-box visualization.</div></li>
+        <li><div class="head"><span class="num">2</span><div class="headline">No Generic Message Transformation Pipelines</div></div><div class="where">Stream configuration (StreamConfig in server/jetstream.go) offers fixed options like <code>Mirror</code> and <code>Source</code> but no <code>Transform</code> field for arbitrary, user-defined processing logic on messages.</div><div class="body">Stays focused on high-performance, low-latency message delivery without adding the overhead and security concerns of a custom processing engine. Delegates complex ETL and transformation tasks to external streaming processors or client applications. Risk: Users might choose platforms with integrated FaaS or stream processing capabilities for end-to-end data pipelines.</div></li>
+        <li><div class="head"><span class="num">3</span><div class="headline">No Dynamic Role-Based Access Control on Data</div></div><div class="where">Authorization (<code>--user</code>, <code>--pass</code>, <code>--auth</code>) and account-level imports/exports are present, but there's no <code>SubjectACL</code> or <code>MessagePolicy</code> structure for granular read/write permissions based on arbitrary roles or conditions beyond simple subject patterns.</div><div class="body">Simplifies the authorization model, focusing on account-level trust and delegation. Avoids the exponential complexity of fine-grained, dynamic access control lists that require deep inspection of message content or complex authorization rules per subject. Risk: May not meet the granular security requirements of highly regulated or complex multi-tenant applications.</div></li>
+        <li><div class="head"><span class="num">4</span><div class="headline">No External Orchestration Integration</div></div><div class="where">Lame Duck Mode and internal clustering provide self-management, but there are no explicit hooks or APIs (e.g., to Kubernetes HPA, cloud autoscalers, or external scheduling tools) to trigger automatic scaling, rebalancing, or maintenance events based on external metrics or schedules.</div><div class="body">Keeps the core server lean and focused on messaging, relying on operators or external systems to drive infrastructure-level changes. Avoids coupling with specific orchestration platforms, increasing portability. Risk: Requires more manual integration effort to achieve full automation in dynamic cloud environments.</div></li>
+        <li><div class="head"><span class="num">5</span><div class="headline">No Dynamic Plugin/Extension System</div></div><div class="where">The entire codebase is Go, with no visible interfaces or mechanisms for loading external modules (e.g., Lua, WASM, shared libraries) at runtime to extend server functionality without recompilation.</div><div class="body">Ensures maximum performance, type safety, and security by keeping all core logic within the compiled Go binary. Avoids the performance overhead, security vulnerabilities, and complexity of managing a plugin runtime and API stability. Risk: Limits extensibility for users who want to customize server behavior without contributing directly to the core codebase.</div></li>
       </ul>
     </section>
 
