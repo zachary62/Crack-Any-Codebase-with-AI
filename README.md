@@ -42,12 +42,38 @@ Chapters 11 through 18 follow the same shape: one workflow, one set of prompts, 
 
 ## Install once
 
+Install once from the repo root. Choose the LLM provider you want to use:
+
 ```bash
+
 git clone https://github.com/zachary62/Crack-Any-Codebase-with-AI
 cd Crack-Any-Codebase-with-AI
+```
 
-pip install -r utils/requirements.txt
-export ANTHROPIC_API_KEY=sk-ant-...   # or OPENAI_API_KEY, or GEMINI_API_KEY
+**pip**
+
+```bash
+# with toml
+pip install -e .               # Anthropic Claude (default)
+pip install -e ".[openai]"     # OpenAI
+pip install -e ".[google]"     # Google Gemini
+```
+
+**uv**
+
+```bash
+uv sync                        # Anthropic Claude (default)
+uv sync --extra openai         # OpenAI
+uv sync --extra google         # Google Gemini
+```
+
+Then export the matching API key:
+
+```bash
+export ANTHROPIC_API_KEY=...   # Claude
+export OPENAI_API_KEY=...      # OpenAI
+export GEMINI_API_KEY=...      # Gemini
+export OLLAMA_HOST=http://localhost:11434   # local Ollama (no key needed)
 ```
 
 Smoke test the LLM wrapper:
@@ -93,5 +119,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from utils import call_llm, crawl
 ```
 
-`utils/call_llm.py` picks the provider based on which env var you set (Anthropic, OpenAI, or Gemini). Override with `LLM_PROVIDER=<name>` and `ANTHROPIC_MODEL` / `OPENAI_MODEL` / `GEMINI_MODEL`.
+`utils/call_llm.py` picks the provider based on which env var you set (Anthropic, OpenAI, or Gemini). Override with `LLM_PROVIDER=<name>` and `ANTHROPIC_MODEL` / `OPENAI_MODEL` / `GEMINI_MODEL` / `OLLAMA_MODEL`.
 
+**Ollama** uses the OpenAI-compatible endpoint (`/v1/chat/completions`) — no extra dependency required.
+Default host: `http://localhost:11434`. Override the model with `OLLAMA_MODEL=your-model`.

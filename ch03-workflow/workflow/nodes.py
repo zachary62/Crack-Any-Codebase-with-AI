@@ -34,10 +34,18 @@ def load_instructions(name):
 
 
 def parse_yaml(text):
-    """Strict YAML extractor. Raises on missing or invalid fence so retry kicks in."""
+    """Extract YAML from a fenced block, or fall back to parsing the raw response."""
     m = re.search(r"```yaml\s*\n(.*?)```", text, re.DOTALL)
-    assert m, f"LLM response missing ```yaml fence. Got:\n{text[:500]}"
-    return yaml.safe_load(m.group(1))
+    if m:
+        return yaml.safe_load(m.group(1))
+    try:
+        result = yaml.safe_load(text)
+        assert isinstance(result, dict), "Expected a YAML mapping"
+        return result
+    except yaml.YAMLError as e:
+        raise AssertionError(
+            f"LLM response is not valid YAML and has no ```yaml fence. Got:\n{text[:500]}"
+        ) from e
 
 
 def slug(s):
