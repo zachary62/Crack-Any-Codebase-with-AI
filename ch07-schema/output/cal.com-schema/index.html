@@ -1,0 +1,2163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cal.com: schema</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+</script>
+<script>
+  window.addEventListener('load', async function () {
+    if (window.hljs) { try { hljs.highlightAll(); } catch (e) {} }
+    if (!window.mermaid) return;
+    var blocks = document.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < blocks.length; i++) {
+      var el = blocks[i], src = el.textContent;
+      try {
+        if ((await mermaid.parse(src, { suppressErrors: true })) === false) { el.remove(); continue; }
+        var out = await mermaid.render('mmd' + i, src);
+        el.innerHTML = out.svg;
+      } catch (e) { el.remove(); }
+    }
+  });
+</script>
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #fff; --text: #101828; --muted: #667085;
+    --faint: #98a2b3; --rule: #e4e7ec; --line: #eef0f3;
+    --accent: #6941c6; --accent-soft: #f4f0ff; --good: #16a34a; --stone: #9aa4b2;
+    --stone-bg: #f2f4f7; --shadow: 0 1px 2px rgba(16,24,40,.05); --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 13.5px; line-height: 1.5; background: var(--bg); color: var(--text); margin: 0;
+    -webkit-font-smoothing: antialiased; }
+  code, .mono { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; }
+  main { max-width: 1280px; margin: 0 auto; padding: 0 24px 56px; }
+
+  .hero { background: radial-gradient(120% 140% at 50% 0%, #2b1c4d 0%, #12091f 70%);
+    color: #fff; padding: 46px 20px 42px; text-align: center; }
+  .hero-inner { max-width: 1120px; margin: 0 auto; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 7px; color: #c4b5fd;
+    font-size: .68rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+  .eyebrow::before { content: ''; width: 16px; height: 2px; background: #a78bfa; border-radius: 2px; }
+  .hero h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -.025em; margin: 12px 0 10px; }
+  .hero .sub { font-size: .94rem; color: #d6cff0; margin: 0 auto; line-height: 1.6; }
+
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin: 42px 2px 14px; }
+  .sec-n { font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 700; color: var(--accent); }
+  .sec-label { display: flex; align-items: center; gap: 9px; font-size: .68rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .sec-label::before { content: ''; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+  .sec-note { font-size: .8rem; color: var(--faint); }
+  .scroll-hint { margin-left: auto; font-size: .68rem; font-weight: 600; color: var(--faint); }
+
+  /* Friendly "start here" welcome + per-section intros */
+  .intro { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 24px; margin: 30px 0 4px; }
+  .intro-label { font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px; }
+  .intro p { margin: .5em 0; font-size: .96rem; color: #344054; line-height: 1.7; }
+  .intro p:first-child { margin-top: 0; }
+  .intro strong { color: var(--text); }
+  .sec-intro { font-size: .9rem; color: #475467; line-height: 1.6; margin: -4px 2px 12px; }
+  .sec-intro p { margin: 0; }
+
+  /* Hero diagram (the big picture, right under the welcome) */
+  .hero-diagram { margin: 18px 0 4px; }
+  .hero-diagram-cap { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); margin: 0 2px 9px; }
+  .erd { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; overflow-x: auto; }
+  .erd pre.mermaid { margin: 0; text-align: center; background: transparent; }
+  .erd pre.mermaid svg { max-width: 100%; height: auto; }
+
+  .rail { display: flex; gap: 16px; align-items: stretch; overflow-x: auto;
+    scroll-snap-type: x proximity; padding: 4px 2px 18px; margin: 0; list-style: none; }
+  .rail::-webkit-scrollbar { height: 9px; }
+  .rail::-webkit-scrollbar-track { background: var(--line); border-radius: 5px; }
+  .rail::-webkit-scrollbar-thumb { background: #cbd2dc; border-radius: 5px; }
+
+  .scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+  .scroll::-webkit-scrollbar { width: 9px; }
+  .scroll::-webkit-scrollbar-thumb { background: #dce0e7; border-radius: 5px; }
+
+  /* Natural height, capped: short cards (tour/flows) stay short; long cards
+     (deep dive) hit the cap and scroll inside. align-items:stretch keeps cards
+     in the same rail equal height. */
+  .card { scroll-snap-align: start; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); box-shadow: var(--shadow); border-top: 3px solid var(--accent);
+    display: flex; flex-direction: column; overflow: hidden; max-height: 72vh; }
+  .card-top { flex-shrink: 0; padding: 14px 18px 12px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #fbfaff, #fff); font-weight: 700; font-size: .98rem;
+    line-height: 1.35; }
+  .card-top code { font-size: .82em; }
+  .card-body { padding: 13px 18px 16px; font-size: .84rem; }
+  .card-body p { margin: .5em 0; color: #344054; line-height: 1.6; }
+  .card-body p:first-child { margin-top: 0; }
+  .card-body strong { color: var(--text); }
+  .card-body em { color: var(--muted); }
+  .card-body ul, .card-body ol { margin: .5em 0; padding-left: 1.3em; }
+  .card-body li { margin: .3em 0; color: #344054; line-height: 1.55; }
+
+  /* widths per section */
+  .rail.tour .card { flex: 0 0 400px; width: 400px; }
+  .rail.flows .card { flex: 0 0 400px; width: 400px; }
+  .rail.deep .card { flex: 0 0 480px; width: 480px; }
+  .rail.acts .card { flex: 0 0 420px; width: 420px; }
+
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .78rem; }
+  th, td { border: 1px solid var(--rule); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--stone-bg); font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  td code { font-size: .92em; }
+
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 11px 13px; overflow-x: auto; margin: 10px 0; }
+  pre code { padding: 0; font-size: .74rem; line-height: 1.5; }
+  pre code.hljs { background: transparent; padding: 0; color: #e2e8f0; }
+  code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .84em;
+    background: var(--stone-bg); color: var(--text); padding: 1px 5px; border-radius: 4px; }
+
+  footer { color: var(--faint); font-size: .74rem; text-align: center; margin-top: 44px;
+    padding-top: 18px; border-top: 1px solid var(--rule); }
+  @media (max-width: 560px) { .card { flex-basis: 86vw !important; width: 86vw !important; } }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">Schema</span>
+      <h1>Cal.com</h1>
+      <p class="sub">Cal.com is a complex, multi-tenant scheduling system whose schema, built across 20 core tables and 595 migrations, reveals a platform prioritizing deep customization for users and organizations. This architecture supports robust audit trails, granular access control, and advanced billing features, reflecting a sophisticated approach to managing diverse scheduling requirements.</p>
+    </div>
+  </header>
+  <main>
+    <section class="hero-diagram">
+      <div class="hero-diagram-cap">The whole schema at a glance &mdash; 20 core tables and how they connect</div>
+      <div class="erd"><pre class="mermaid">erDiagram
+    User ||--o{ EventType : "creates"
+    User ||--o{ Schedule : "defines_own"
+    User ||--o{ Credential : "connects"
+    User ||--o{ Membership : "is_part_of_team_as"
+    User ||--o{ Profile : "has_organization_identity"
+
+    Team ||--o{ Membership : "has"
+    Team ||--o{ EventType : "offers"
+    Team ||--o{ Profile : "defines_user_profiles_in"
+    Team ||--o{ Host : "assigns_team_members_as"
+
+    Profile ||--o{ EventType : "manages_organization"
+
+    EventType ||--o{ Booking : "generates"
+    EventType ||--o{ Host : "can_be_hosted_by"
+    EventType ||--o{ Schedule : "uses_availability"
+    EventType ||--|| DestinationCalendar : "sends_bookings_to"
+    EventType ||--o{ SelectedCalendar : "checks_for_availability"
+
+    Booking ||--o{ Attendee : "includes"
+    Booking ||--o{ Payment : "receives"
+    Booking ||--o{ BookingReference : "uses_external_details"
+    Booking ||--|| Tracking : "has_details"
+    Booking ||--o{ BookingAudit : "logs_changes_for"
+    Booking ||--o{ BookingReport : "is_subject_to"
+
+    Host ||--|| User : "represents_user_as"
+
+    Credential ||--o{ SelectedCalendar : "powers_availability_check"
+    Credential ||--o{ DestinationCalendar : "powers_booking_creation"
+    Credential ||--o{ HostLocation : "provides_location_detail"
+
+    Schedule ||--o{ Availability : "details_slots"
+
+    Availability ||--|| Schedule : "belongs_to"
+    Availability ||--|| User : "is_for"
+    Availability ||--|| EventType : "is_for_event"
+
+    HostLocation ||--|| Host : "defines_for"
+
+    AuditActor ||--o{ BookingAudit : "performs"</pre></div>
+    </section>
+
+    <div class="sec-head">
+      <span class="sec-n">01</span>
+      <div class="sec-label">The tour</div>
+      <div class="sec-note">the schema as a story, one cluster at a time</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section charts the database schema as a cohesive story, presenting clusters of related tables with an accompanying diagram. Observe how fundamental business domains like users, events, and organizations are partitioned and interconnected within the data model.</p>
+</div>
+    <ul class="rail tour">
+      <li class="card">
+        <div class="card-top">Step 1 — The User and Their Basic Availability (<code>User</code>, <code>Schedule</code>, <code>Availability</code>)</div>
+        <div class="scroll"><div class="card-body"><p>At the heart of our product is the <code>User</code> — the person who wants to offer or book time. We remember their <code>email</code>, <code>name</code>, and their <code>timeZone</code> so we can correctly display times for everyone. Each user can define one or more <code>Schedule</code>s, which are like reusable templates for their general working hours, and within those schedules, <code>Availability</code> records the specific blocks of time (e.g., <code>startTime</code>, <code>endTime</code>, <code>days</code> of the week) they are generally open for meetings. This lets the system know when a user is &quot;on duty.&quot;</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Step 2 — Defining What Can Be Booked (<code>EventType</code>)</div>
+        <div class="scroll"><div class="card-body"><p>Once a user has their basic availability set, they define <em>what kinds of meetings</em> people can book with them. This is where <code>EventType</code> comes in. Think of an EventType as a template for a meeting — it has a <code>title</code>, a unique <code>slug</code> for its public URL, a <code>length</code> (in minutes), and a <code>description</code>. Crucially, an EventType can specify different <code>locations</code> (like Zoom or a physical address), determine if <code>requiresConfirmation</code> from the host, and even define <code>customInputs</code> to ask specific questions from bookers, like &quot;What topic do you want to discuss?&quot;.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Step 3 — External Calendar Integration (<code>Credential</code>, <code>SelectedCalendar</code>, <code>DestinationCalendar</code>)</div>
+        <div class="scroll"><div class="card-body"><p>To prevent double bookings and manage new events, our system needs to talk to external calendars like Google Calendar or Outlook. This is handled by <code>Credential</code>, which securely stores the API <code>key</code> or token for a user's connection to an external service. A user can then tell the system which of their connected calendars it should look at to determine their <em>actual</em> free/busy slots via <code>SelectedCalendar</code>, ensuring they don't get booked when they're already busy. Finally, <code>DestinationCalendar</code> specifies which particular external calendar a <em>new</em> <code>Booking</code> should be added to once it's confirmed.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Step 4 — The Actual Booking (<code>Booking</code>, <code>Attendee</code>, <code>BookingReference</code>, <code>Tracking</code>, <code>Payment</code>)</div>
+        <div class="scroll"><div class="card-body"><p>When someone successfully schedules a meeting, a <code>Booking</code> record is created. This is the central event, remembering the <code>startTime</code> and <code>endTime</code>, the <code>title</code>, and its current <code>status</code> (e.g., <code>ACCEPTED</code>, <code>CANCELLED</code>). The <code>Attendee</code> table captures who booked the meeting (<code>name</code>, <code>email</code>, <code>timeZone</code>), while <code>BookingReference</code> stores any external meeting details like a Zoom <code>meetingUrl</code> or ID, so everyone knows where to go. If the booking originated from a marketing campaign, <code>Tracking</code> can store <code>utm_source</code> details. Should money be involved, the <code>Payment</code> table records the <code>amount</code>, <code>currency</code>, and <code>success</code> status of the transaction.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Step 5 — Managing Group &amp; Team Scheduling (<code>Team</code>, <code>Membership</code>, <code>Host</code>, <code>HostGroup</code>, <code>Profile</code>)</div>
+        <div class="scroll"><div class="card-body"><p>Scheduling isn't just for individuals; organizations have their own needs. A <code>Team</code> represents an organization or a department, with its own <code>name</code> and <code>slug</code>. <code>Membership</code> links a <code>User</code> to a <code>Team</code>, defining their <code>role</code> (like <code>MEMBER</code> or <code>ADMIN</code>). For <code>EventType</code>s that can be hosted by multiple team members (e.g., a &quot;Sales Demo&quot; where any sales rep can take it), the <code>Host</code> table lists which <code>User</code>s are eligible and can even assign a <code>priority</code> or <code>weight</code> for round-robin scheduling. <code>HostGroup</code>s allow you to categorize these hosts. And for users who belong to an organization, <code>Profile</code> provides a distinct identity tied to that <code>Team</code>, allowing for organization-specific settings and usernames.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Step 6 — Credit-based Features and Core Billing (<code>CreditBalance</code>, <code>CreditExpenseLog</code>, <code>CreditPurchaseLog</code>, <code>TeamBilling</code>, <code>OrganizationBilling</code>, <code>PlatformBilling</code>)</div>
+        <div class="scroll"><div class="card-body"><p>Beyond individual meeting payments, the system also tracks how users and organizations pay for the platform's features. <code>CreditBalance</code> holds pre-paid credits, which can be spent on features like SMS reminders or AI phone calls, with <code>CreditExpenseLog</code> detailing each credit <code>creditFor</code> type and <code>credits</code> used, and <code>CreditPurchaseLog</code> recording when <code>credits</code> were bought. For larger accounts, <code>TeamBilling</code>, <code>OrganizationBilling</code>, and <code>PlatformBilling</code> manage subscriptions, storing <code>subscriptionId</code>, <code>planName</code>, and <code>pricePerSeat</code>. The <code>highWaterMark</code> on these tables is an important product decision, tracking the maximum number of seats used in a billing period, even if some users are later removed, to ensure fair billing.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Step 7 — Audit Trails, Reports, and Watchlists (<code>BookingAudit</code>, <code>AuditActor</code>, <code>BookingReport</code>, <code>WrongAssignmentReport</code>, <code>Watchlist</code>)</div>
+        <div class="scroll"><div class="card-body"><p>In a complex system, it's critical to know <code>what happened, when, and by whom</code>. <code>BookingAudit</code> provides an immutable record of every significant change to a <code>Booking</code> (e.g., <code>status</code> changes, <code>attendee_added</code>). The <code>AuditActor</code> table ensures we always know who (a <code>User</code>, a <code>GUEST</code>, or <code>SYSTEM</code>) performed the action, even if their original record is later deleted, preserving audit integrity. If a user encounters a problematic booking, they can create a <code>BookingReport</code> specifying a <code>reason</code> like <code>SPAM</code>. For incorrect host assignments in round-robin, <code>WrongAssignmentReport</code> exists. Finally, <code>Watchlist</code> helps enforce policies by allowing the system to <code>BLOCK</code> or <code>REPORT</code> bookings from specific <code>email</code>s, <code>domain</code>s, or <code>username</code>s, either globally or per organization.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Step 8 — Developer Tools and Background Processing (<code>App</code>, <code>Webhook</code>, <code>ApiKey</code>, <code>PlatformOAuthClient</code>, <code>DSyncData</code>, <code>DelegationCredential</code>, <code>Task</code>)</div>
+        <div class="scroll"><div class="card-body"><p>Behind the scenes, several tables power integrations and internal operations. <code>App</code> defines available third-party applications. <code>Webhook</code> allows external systems to subscribe to real-time events, like <code>BOOKING_CREATED</code>, by sending data to a <code>subscriberUrl</code>. Developers can get programmatic access using <code>ApiKey</code>s. For large enterprise integrations, <code>PlatformOAuthClient</code> provides secure access for external applications to manage organization data. <code>DSyncData</code> facilitates directory synchronization (like SCIM) for managing user and group memberships directly from an organization's directory. <code>DelegationCredential</code> allows a service account to manage calendars on behalf of an entire organization. Finally, <code>Task</code> is a general queue that remembers background jobs (<code>type</code>, <code>payload</code>, <code>scheduledAt</code>) that need to be processed asynchronously, like sending reminder emails or syncing data.</p>
+</div></div>
+      </li>
+    </ul>
+    <div class="sec-head">
+      <span class="sec-n">02</span>
+      <div class="sec-label">The flows</div>
+      <div class="sec-note">one user action, many tables, in order</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>Here, we trace the specific read and write operations across Cal.com's tables for common user actions, such as scheduling an event or modifying a team setting. This illustrates the precise data lifecycle and transactional impact of key interactions.</p>
+</div>
+    <ul class="rail flows">
+      <li class="card">
+        <div class="card-top">A user books an event</div>
+        <div class="scroll"><div class="card-body"><p>This is probably the most common flow in our system – someone schedules a meeting. It seems simple on the surface, but a lot of moving pieces work together to make sure that slot is truly available and everyone gets the right notifications.</p>
+<ol>
+<li>
+<p><strong>Check for available time slots and hosts.</strong>
+<em>Reads:</em> <code>EventType</code>, <code>User</code>, <code>Host</code>, <code>Schedule</code>, <code>Availability</code>, <code>SelectedCalendar</code>, <code>CalVideoSettings</code>. <em>Writes:</em> <code>SelectedSlots</code>. <em>External:</em> External Calendar API (e.g., Google Calendar, Outlook Calendar) to fetch real-time free/busy times for hosts.</p>
+<p>When a user lands on a booking page, we first figure out <em>what</em> kind of event they're looking at (<code>EventType</code>). Then, for each potential host, we check their <code>Schedule</code> and <code>Availability</code> to see when they're generally free. The crucial part here is <code>SelectedCalendar</code>: we make a live call to their connected calendar (Google, Outlook, etc.) to get their <em>actual</em> free/busy status. To prevent two people from booking the exact same slot at the same time, we temporarily reserve the slot in <code>SelectedSlots</code> as soon as someone selects it. We also quickly check <code>CalVideoSettings</code> for any specific video conferencing requirements for this event type.</p>
+</li>
+<li>
+<p><strong>Create the core booking record and attendee details.</strong>
+<em>Reads:</em> <code>User</code>, <code>EventType</code>. <em>Writes:</em> <code>Booking</code>, <code>Attendee</code>, <code>BookingAudit</code>, <code>AuditActor</code>, <code>Tracking</code>. <em>External:</em> none.</p>
+<p>Once the user confirms, we create the main <code>Booking</code> record with all the event details. We also add an <code>Attendee</code> record for the person who just booked. This is where our audit trail begins: we create an <code>AuditActor</code> record for the booker (or reuse an existing one if they're a known user) and then log the <code>BookingAudit</code> event, marking the booking as &quot;created.&quot; If there were any tracking parameters like UTMs, those get stored in the <code>Tracking</code> table.</p>
+</li>
+<li>
+<p><strong>Process payment (if the event isn't free).</strong>
+<em>Reads:</em> <code>Booking</code>, <code>EventType</code>. <em>Writes:</em> <code>Payment</code>, <code>CreditExpenseLog</code>. <em>External:</em> Payment Provider (e.g., Stripe).</p>
+<p>If the event has a cost, this is where we talk to our payment provider. We create a <code>Payment</code> record to log the transaction details, including the amount, currency, and whether it was successful. If the user paid with credits, we'd also log that in <code>CreditExpenseLog</code>. This step is critical; if payment fails, the booking process stops here.</p>
+</li>
+<li>
+<p><strong>Sync the event to external calendars.</strong>
+<em>Reads:</em> <code>Booking</code>, <code>Attendee</code>, <code>EventType</code>, <code>DestinationCalendar</code>, <code>SelectedCalendar</code>, <code>Credential</code>, <code>DelegationCredential</code>. <em>Writes:</em> <code>BookingReference</code>, <code>CalendarCacheEvent</code>. <em>External:</em> External Calendar API.</p>
+<p>Now for the &quot;magic&quot; that puts the event on everyone's calendar! We use the host's <code>DestinationCalendar</code> (and possibly <code>DelegationCredential</code> if they're part of an organization using a service account) and the booker's email to add the event to their respective external calendars. We create a <code>BookingReference</code> to store the external event IDs, linking our internal booking to the external calendar entries. We also cache the event details in <code>CalendarCacheEvent</code> for faster lookups later.</p>
+</li>
+<li>
+<p><strong>Trigger post-booking actions and notifications.</strong>
+<em>Reads:</em> <code>Booking</code>, <code>EventType</code>, <code>Webhook</code>. <em>Writes:</em> <code>WebhookScheduledTriggers</code>, <code>BookingAudit</code>. <em>External:</em> Webhook endpoints, Email Service.</p>
+<p>Finally, we tie up loose ends. The <code>Booking</code> status is updated (e.g., from PENDING to ACCEPTED). We might schedule <code>WebhookScheduledTriggers</code> for reminders or other integrations. We also send out confirmation emails to both the host and the attendee using our Email Service. Another <code>BookingAudit</code> record is created to log the status change.</p>
+</li>
+</ol>
+<pre class="mermaid">flowchart LR
+  EventType --> User --> Host --> Schedule --> Availability --> SelectedCalendar --> SelectedSlots --> Booking --> Attendee --> AuditActor --> BookingAudit --> Tracking --> Payment --> CreditExpenseLog --> BookingReference --> CalendarCacheEvent --> WebhookScheduledTriggers --> Webhook
+</pre>
+<hr />
+<p>Next up, let's look at how a user brings a new tool into their workflow.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">A user connects a new calendar integration</div>
+        <div class="scroll"><div class="card-body"><p>Connecting an integration is like giving us a key to a new room in their digital house. It allows us to read their availability and add events on their behalf.</p>
+<ol>
+<li>
+<p><strong>Authorize with the external service.</strong>
+<em>Reads:</em> <code>User</code>. <em>Writes:</em> <code>Credential</code>. <em>External:</em> OAuth Provider (e.g., Google, Microsoft).</p>
+<p>When a user clicks &quot;Connect,&quot; we send them to the calendar provider's login page. After they grant us permission, the provider gives us an authorization code. We then exchange this code for access and refresh tokens via the OAuth Provider's API, and store these securely in our <code>Credential</code> table, linked to the <code>User</code>. This <code>Credential</code> is our &quot;key.&quot;</p>
+</li>
+<li>
+<p><strong>Fetch the user's available calendars.</strong>
+<em>Reads:</em> <code>Credential</code>. <em>Writes:</em> <code>CalendarCache</code>. <em>External:</em> External Calendar API.</p>
+<p>Using the shiny new <code>Credential</code>, we make a call to the External Calendar API (like Google Calendar API) to list all the calendars associated with the user's account (e.g., &quot;Work,&quot; &quot;Personal,&quot; &quot;Holidays&quot;). We might temporarily store this raw list in <code>CalendarCache</code> so the user can pick and choose.</p>
+</li>
+<li>
+<p><strong>Save selected calendars and set a primary destination.</strong>
+<em>Reads:</em> <code>User</code>, <code>Credential</code>. <em>Writes:</em> <code>SelectedCalendar</code>, <code>DestinationCalendar</code>. <em>External:</em> External Calendar API.</p>
+<p>The user then tells us which of those calendars we should actually <em>use</em> for checking availability and which one is their <code>DestinationCalendar</code> – where we should <em>put</em> new events. For each selected calendar, we create a <code>SelectedCalendar</code> record and, importantly, we subscribe to push notifications from the external calendar API so we get real-time updates on their free/busy status.</p>
+</li>
+<li>
+<p><strong>Log the integration event.</strong>
+<em>Reads:</em> <code>User</code>. <em>Writes:</em> <code>AuditActor</code>, <code>BookingAudit</code>. <em>External:</em> none.</p>
+<p>Just like with booking, we log this important action. We ensure an <code>AuditActor</code> exists for the <code>User</code> and then record a <code>BookingAudit</code> entry, marking that the user has successfully connected a new calendar integration. This helps us trace system changes and user activity.</p>
+</li>
+</ol>
+<pre class="mermaid">flowchart LR
+  User --> Credential --> CalendarCache --> SelectedCalendar --> DestinationCalendar --> AuditActor --> BookingAudit
+</pre>
+<hr />
+<p>Sometimes, plans change, and we need to gracefully handle that.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">A host cancels a booking</div>
+        <div class="scroll"><div class="card-body"><p>Cancelling a booking means undoing some of the actions from the booking flow, ensuring everyone is informed, and the host's calendar is freed up.</p>
+<ol>
+<li>
+<p><strong>Verify permissions and retrieve booking details.</strong>
+<em>Reads:</em> <code>User</code>, <code>Booking</code>, <code>EventType</code>, <code>Team</code>, <code>Membership</code>, <code>RolePermission</code>. <em>Writes:</em> <code>AuditActor</code>, <code>BookingAudit</code>. <em>External:</em> none.</p>
+<p>First, we need to confirm that the <code>User</code> attempting to cancel actually has the right to do so. We check their <code>Membership</code> and <code>RolePermission</code> within any relevant <code>Team</code>. Then, we fetch the <code>Booking</code> details and log the <em>attempt</em> to cancel in <code>BookingAudit</code> via an <code>AuditActor</code>, capturing who is performing this action.</p>
+</li>
+<li>
+<p><strong>Update the booking status and handle refunds.</strong>
+<em>Reads:</em> <code>Booking</code>. <em>Writes:</em> <code>Booking</code>, <code>Payment</code>, <code>CreditExpenseLog</code>, <code>BookingAudit</code>. <em>External:</em> Payment Provider.</p>
+<p>The <code>Booking</code> record's <code>status</code> is updated to <code>CANCELLED</code>, along with the <code>cancellationReason</code> and <code>cancelledBy</code> fields. If the original booking involved a <code>Payment</code>, we initiate a refund through the Payment Provider, updating the <code>Payment</code> record's <code>refunded</code> status. If credits were used, <code>CreditExpenseLog</code> would be adjusted. Another <code>BookingAudit</code> entry records the definitive status change.</p>
+</li>
+<li>
+<p><strong>Remove or update events on external calendars.</strong>
+<em>Reads:</em> <code>Booking</code>, <code>BookingReference</code>, <code>Credential</code>, <code>DelegationCredential</code>. <em>Writes:</em> <code>BookingReference</code>. <em>External:</em> External Calendar API.</p>
+<p>Since the meeting is off, we need to remove it from the host's and attendee's calendars. We look up the <code>BookingReference</code> to get the external event IDs and use the <code>Credential</code> (or <code>DelegationCredential</code> for team accounts) to tell the External Calendar API to cancel or delete these events. The <code>BookingReference</code> might also be updated to reflect the deletion.</p>
+</li>
+<li>
+<p><strong>Stop scheduled actions and send notifications.</strong>
+<em>Reads:</em> <code>Booking</code>, <code>WebhookScheduledTriggers</code>, <code>Webhook</code>. <em>Writes:</em> <code>WebhookScheduledTriggers</code>. <em>External:</em> Webhook endpoints, Email Service.</p>
+<p>Any pending <code>WebhookScheduledTriggers</code> related to this booking (like reminders) are cancelled. We also trigger the <code>BOOKING_CANCELLED</code> <code>Webhook</code> event, notifying integrated apps, and send out cancellation emails to all relevant parties (host, attendee) via our Email Service.</p>
+</li>
+</ol>
+<pre class="mermaid">flowchart LR
+  User --> Booking --> EventType --> Team --> Membership --> RolePermission --> AuditActor --> BookingAudit --> Payment --> CreditExpenseLog --> BookingReference --> Credential --> DelegationCredential --> WebhookScheduledTriggers --> Webhook
+</pre>
+<hr />
+<p>Finally, let's explore how a team grows.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">An admin adds a new member to a team</div>
+        <div class="scroll"><div class="card-body"><p>This process is like adding a new keyholder to a shared office – granting access and responsibility within a <code>Team</code>.</p>
+<ol>
+<li>
+<p><strong>Verify admin privileges and retrieve team context.</strong>
+<em>Reads:</em> <code>User</code> (admin), <code>Team</code>, <code>Membership</code>, <code>RolePermission</code>. <em>Writes:</em> <code>AuditActor</code>, <code>BookingAudit</code>. <em>External:</em> none.</p>
+<p>Before anything else, we confirm the <code>User</code> initiating the action is indeed an <code>ADMIN</code> of the <code>Team</code>. We check their existing <code>Membership</code> and <code>RolePermission</code> to ensure they have the authority. An <code>AuditActor</code> is created (if new) and a <code>BookingAudit</code> entry is made to record that this admin is performing an &quot;add member&quot; action.</p>
+</li>
+<li>
+<p><strong>Identify or create the new user.</strong>
+<em>Reads:</em> <code>User</code> (for invitee email). <em>Writes:</em> <code>User</code>, <code>UserPassword</code>. <em>External:</em> none.</p>
+<p>We check if the invitee's email address already belongs to an existing <code>User</code> in our system. If not, a new <code>User</code> record might be provisioned. If it's a local account, a <code>UserPassword</code> hash would be stored (though many users sign up via OAuth). This step ensures we have a <code>User</code> entity to link the <code>Membership</code> to.</p>
+</li>
+<li>
+<p><strong>Create a pending team membership and an invite token.</strong>
+<em>Reads:</em> <code>Team</code>, <code>User</code> (invitee). <em>Writes:</em> <code>Membership</code>, <code>VerificationToken</code>. <em>External:</em> Email Service.</p>
+<p>Now, the core of the invite: a new <code>Membership</code> record is created, linking the <code>User</code> to the <code>Team</code>, but it's initially marked as <code>accepted=false</code>. We also generate a unique <code>VerificationToken</code> for the invite link. This token is then sent to the invitee's email address using our Email Service, allowing them to accept the invitation and join the team.</p>
+</li>
+<li>
+<p><strong>Log the invitation event.</strong>
+<em>Reads:</em> <code>Membership</code>, <code>VerificationToken</code>. <em>Writes:</em> <code>BookingAudit</code>. <em>External:</em> none.</p>
+<p>As a final step, we log this invitation in <code>BookingAudit</code>. This record tracks the event, including details about the team, the invited user, and the <code>VerificationToken</code> used, providing a clear history of team management actions.</p>
+</li>
+</ol>
+<pre class="mermaid">flowchart LR
+  User --> Team --> Membership --> RolePermission --> AuditActor --> BookingAudit --> VerificationToken
+</pre>
+</div></div>
+      </li>
+    </ul>
+    <div class="sec-head">
+      <span class="sec-n">03</span>
+      <div class="sec-label">Table deep dive</div>
+      <div class="sec-note">columns are decisions, indexes are the hot queries</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>Each significant table's columns and indexes are examined here to expose the explicit design decisions that carry business logic and performance implications. Focus on how specific field types, constraints, and index strategies enforce data integrity and query efficiency.</p>
+</div>
+    <ul class="rail deep">
+      <li class="card">
+        <div class="card-top">User — Stores all account information for individuals on the platform</div>
+        <div class="scroll"><div class="card-body"><p>The <code>User</code> table holds the core information for every individual account, managing their personal details, settings, and the various entities they create or interact with in the scheduling system.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>uuid</code></td>
+<td style="text-align:left"><code>String</code> (<code>Uuid</code>)</td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">A public, immutable identifier for the user, separate from the auto-incrementing <code>id</code>, for external references and privacy.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>email</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">The user's unique login and contact email, fundamental for identification and communication.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>timeZone</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">The user's default timezone, influencing how their availability and event times are displayed.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>hideBranding</code></td>
+<td style="text-align:left"><code>Boolean</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">A toggle for premium users to remove Cal.com branding from their booking pages.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>role</code></td>
+<td style="text-align:left"><code>UserPermissionRole</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">Defines the user's base permissions within the system, like <code>USER</code> or <code>ADMIN</code>.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>organizationId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">Links a user to their primary organization, though deprecated in favor of <code>Profile</code> for multi-organization scenarios.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>locked</code></td>
+<td style="text-align:left"><code>Boolean</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">A flag to indicate if a user's account has been intentionally locked, preventing login.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>metadata</code></td>
+<td style="text-align:left"><code>Json?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">A flexible field to store extra, unstructured data about the user that doesn't fit into dedicated columns.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The <code>uuid</code> is a clever move for public references, as it avoids exposing sequential internal IDs that could be predictable.</li>
+<li>The <code>organizationId</code> being deprecated hints at a refactor to handle users belonging to multiple organizations more flexibly, now handled by the <code>Profile</code> model.</li>
+<li>The <code>metadata</code> field, while flexible, will require careful handling to query and validate its contents, suggesting a growing need for extensible user data that the core schema doesn't predict.</li>
+<li><code>UserPassword</code> is a separate table, which is a good security practice, keeping password hashes isolated from core user data.</li>
+<li><code>timeZone</code> and <code>weekStart</code> defaults show the product's origin or default market, but are customizable by the user.</li>
+</ul>
+<pre><code class="language-prisma">@@unique([email])
+@@unique([email, username])
+@@unique([username, organizationId])
+@@unique([movedToProfileId])
+</code></pre>
+<ul>
+<li><code>@@unique([email])</code>: This enforces that no two users can register with the same email address, which is fundamental for individual user accounts.</li>
+<li><code>@@unique([email, username])</code>: This makes sure that even if a <code>username</code> is often <code>null</code>, if it <em>is</em> present, the combination of <code>email</code> and <code>username</code> is unique.</li>
+<li><code>@@unique([username, organizationId])</code>: This is key for multi-tenancy; it allows <code>username</code> reuse across different organizations but prevents conflicts <em>within</em> the same organization.</li>
+<li><code>@@unique([movedToProfileId])</code>: This ensures that a user's migration status to a <code>Profile</code> is clearly tracked and singular, preventing ambiguous data.</li>
+</ul>
+<p>This table is a powerhouse, clearly evolving over time with smart additions like <code>uuid</code> and <code>UserPassword</code> separation. However, the <code>organizationId</code> deprecation points to the challenges of retrofitting complex multi-tenancy, and the widespread use of <code>Json?</code> fields (like <code>metadata</code> here) suggests that the schema is highly adaptable but could lead to less structured data over time if not well-managed through code.</p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">EventType — Defines the configurable templates for scheduling different kinds of meetings</div>
+        <div class="scroll"><div class="card-body"><p>Moving from individual users, the <code>EventType</code> table describes all the different kinds of meetings or appointments that a user or team can offer, acting as a customizable blueprint for booking.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>title</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">The human-readable name of the event type, like &quot;30-minute meeting&quot; or &quot;Discovery Call&quot;.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>slug</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">A URL-friendly identifier for the event type, often used in public booking links.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>length</code></td>
+<td style="text-align:left"><code>Int</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">The default duration of the event in minutes.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>periodType</code></td>
+<td style="text-align:left"><code>PeriodType</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">How long this event type is available for booking (e.g., <code>UNLIMITED</code>, <code>ROLLING</code> for a fixed number of days).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>metadata</code></td>
+<td style="text-align:left"><code>Json?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">A flexible JSON field for storing additional, unstructured data like pricing (which was deprecated from dedicated columns).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>parentId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">Allows for creating a hierarchy of event types, where one event type can be managed under another (e.g., a sub-event).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>schedulingType</code></td>
+<td style="text-align:left"><code>SchedulingType?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">Determines how hosts are assigned for team events (e.g., <code>ROUND_ROBIN</code> for even distribution, <code>COLLECTIVE</code> for all hosts).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>requiresConfirmation</code></td>
+<td style="text-align:left"><code>Boolean</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">A flag indicating whether a booking for this event type needs explicit host approval before being finalized.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The <code>slug</code> field, combined with <code>userId</code> or <code>teamId</code> in unique indexes, forms the core of how event types are accessed publicly, ensuring unique, readable URLs.</li>
+<li>The existence of <code>parentId</code> and <code>children</code> relations suggests a sophisticated &quot;managed events&quot; feature, likely for organizations that want to standardize event offerings.</li>
+<li>The deprecation of <code>price</code> and <code>currency</code> columns in favor of <code>metadata.apps.stripe.price</code> indicates a move towards externalizing app-specific data into JSON blobs. While flexible, this means specific values like <code>price</code> are now hidden from direct database schema visibility and require application-level parsing.</li>
+<li><code>bookingFields</code> as <code>Json?</code> (not in the table but related) allows for highly customized booking forms, which is powerful but also means custom validation logic lives outside the database schema.</li>
+<li><code>minimumBookingNotice</code>, <code>beforeEventBuffer</code>, and <code>afterEventBuffer</code> show a detailed approach to managing a host's time and preventing last-minute bookings or back-to-back meetings.</li>
+</ul>
+<pre><code class="language-prisma">@@unique([userId, slug])
+@@unique([teamId, slug])
+@@unique([userId, parentId])
+@@index([parentId, teamId])
+</code></pre>
+<ul>
+<li><code>@@unique([userId, slug])</code>: This makes sure that each individual user has unique, discoverable links for their event types.</li>
+<li><code>@@unique([teamId, slug])</code>: Similarly, this guarantees unique, discoverable links for event types within a specific team.</li>
+<li><code>@@unique([userId, parentId])</code>: This seems to enforce that a user can only have one &quot;managed&quot; child event type directly under a specific parent, crucial for maintaining hierarchy and preventing accidental duplicates in a nested event structure.</li>
+<li><code>@@index([parentId, teamId])</code>: This index helps quickly find all sub-events or managed events that belong to a particular parent event type within a specific team context, which is useful for organizational oversight.</li>
+</ul>
+<p><code>EventType</code> is clearly designed for a highly configurable and flexible scheduling product. The extensive use of <code>Json?</code> for fields like <code>locations</code>, <code>bookingFields</code>, <code>metadata</code>, and <code>recurringEvent</code> offers immense adaptability but pushes schema validation and data consistency concerns to the application layer. The deprecation comments highlight a pattern of moving specific fields into generic <code>metadata</code> JSON, which prioritizes flexibility over strict schema enforcement.</p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Schedule — Defines a reusable set of availability rules for a user or event type</div>
+        <div class="scroll"><div class="card-body"><p>Building on the concept of an <code>EventType</code>, the <code>Schedule</code> table provides a way to define and reuse specific blocks of time when a user or group is available for bookings, which can then be applied to one or many event types or hosts.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>userId</code></td>
+<td style="text-align:left"><code>Int</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">The user who owns and defines this particular schedule.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>name</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">A human-readable name for the schedule (e.g., &quot;Working Hours&quot;, &quot;Weekend Availability&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>timeZone</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">The specific timezone for this schedule, allowing it to override the user's default if needed.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>availability</code></td>
+<td style="text-align:left"><code>Availability[]</code></td>
+<td style="text-align:left">Relation</td>
+<td style="text-align:left">The collection of actual time slots (e.g., &quot;Monday 9-5&quot;) that make up this schedule.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>Schedule</code> is a core abstraction, allowing users to define availability once and apply it to many event types, reducing redundancy and simplifying management.</li>
+<li>The <code>timeZone</code> being optional but present here allows for more granular control over availability, letting a user manage different schedules in different timezones (e.g., a &quot;Europe Sales Schedule&quot; versus a &quot;US Sales Schedule&quot;).</li>
+<li>It plays a central role in connecting a <code>User</code> and <code>EventType</code> to concrete <code>Availability</code> blocks.</li>
+<li>The multiple relationships to <code>EventType</code> (<code>eventType</code>, <code>instantMeetingEvents</code>, and <code>restrictionSchedule</code>) show how a single schedule can serve different purposes, from general availability to specifically blocking times or defining instant meeting slots.</li>
+</ul>
+<pre><code class="language-prisma">@@index([userId])
+</code></pre>
+<ul>
+<li><code>@@index([userId])</code>: This index makes it very fast to retrieve all schedules created or owned by a specific user, which is essential for managing their availability settings.</li>
+</ul>
+<p>The <code>Schedule</code> model is a clean and effective way to manage reusable availability, showing a thoughtful approach to preventing data duplication. Its simplicity is a strength, focusing solely on naming and grouping <code>Availability</code> entries. The multiple relations to <code>EventType</code> are a bit verbose but clearly define the different roles a schedule can play, demonstrating robust control over how and when events can be booked.</p>
+<hr />
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Credential — Stores authentication details for third-party integrations</div>
+        <div class="scroll"><div class="card-body"><p>Beyond scheduling, the <code>Credential</code> table securely holds all the necessary authentication information (like API keys or OAuth tokens) for users or teams to connect their Cal.com account with various third-party applications and services.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>type</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">Identifies the type of integration this credential is for (e.g., &quot;google_calendar&quot;, &quot;zoom&quot;, &quot;stripe&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>key</code></td>
+<td style="text-align:left"><code>Json</code></td>
+<td style="text-align:left">Required</td>
+<td style="text-align:left">Stores the actual credential data, which could be an OAuth token or API key. This is likely encrypted at the application layer.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>encryptedKey</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">Potentially stores an encrypted version of the <code>key</code> or a different type of encrypted credential.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>userId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">The user who owns this credential, if it's a personal integration.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>teamId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">The team that owns this credential, if it's a team-level integration.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>appId</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">Links to the specific <code>App</code> in the App Store that this credential enables.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>invalid</code></td>
+<td style="text-align:left"><code>Boolean?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">A flag to indicate if the credential has become invalid (e.g., token expired, revoked), for proactive management.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>delegationCredentialId</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">Optional</td>
+<td style="text-align:left">Links to a <code>DelegationCredential</code> if this credential is used on behalf of a delegated service account (e.g., for Google Workspace).</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The <code>key</code> column being <code>Json</code> allows for a lot of flexibility in storing different types of authentication data without schema migrations, but it hides the actual structure from the database layer, meaning validation happens in application code.</li>
+<li>The <code>userId</code> and <code>teamId</code> being optional, but presumably exclusive (a credential belongs to a user <em>or</em> a team), indicates support for both personal and shared integrations.</li>
+<li><code>invalid</code> is a critical flag for proactively identifying and handling broken integrations, which is essential for a reliable scheduling service to notify users.</li>
+<li>The presence of <code>delegationCredentialId</code> points to advanced enterprise features, enabling credentials to operate under a broader organizational service account for centralized management.</li>
+<li>The comment <code>// How to make it a required column?</code> on <code>appId</code> suggests a known technical debt or a design challenge where it <em>should</em> be linked to an <code>App</code>, but isn't strictly enforced at the database level, possibly due to legacy data or complex creation flows.</li>
+</ul>
+<pre><code class="language-prisma">@@index([appId])
+@@index([subscriptionId])
+@@index([invalid])
+@@index([userId, delegationCredentialId])
+@@index([teamId])
+</code></pre>
+<ul>
+<li><code>@@index([appId])</code>: This allows the system to quickly find all stored credentials that belong to a specific application, useful for managing integrations.</li>
+<li><code>@@index([subscriptionId])</code>: This index helps find credentials linked to a particular subscription, likely for paid apps or services, speeding up billing-related queries.</li>
+<li><code>@@index([invalid])</code>: This is a very practical index that allows the system to quickly identify and manage credentials that are no longer working, crucial for operational health.</li>
+<li><code>@@index([userId, delegationCredentialId])</code>: This helps in efficiently querying credentials that a specific user has, especially when those credentials might be operating under a delegated service account for organizational contexts.</li>
+<li><code>@@index([teamId])</code>: This speeds up looking up all credentials associated with a particular team, enabling team-level integration management.</li>
+</ul>
+<p>The <code>Credential</code> table is robust, clearly designed with security and flexibility in mind, especially with the <code>key</code> field (presumably encrypted). The clear distinction between user and team ownership, alongside the <code>invalid</code> flag, shows good operational consideration. However, the <code>appId</code> not being strictly required and the <code>type</code> being a <code>String</code> rather than an <code>Enum</code> could lead to data inconsistencies or runtime errors if not carefully managed at the application layer. The introduction of <code>delegationCredentialId</code> adds significant complexity, reflecting enterprise-level features.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Table: Membership — Defines a user's role and acceptance status within a team or organization.</div>
+        <div class="scroll"><div class="card-body"><ol>
+<li>This table acts like an address book for teams, detailing which <code>User</code> belongs to which <code>Team</code> and what their specific role is, along with whether they've accepted their invitation.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>accepted</code></td>
+<td style="text-align:left">Boolean</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">Tracks if a user has formally accepted a team invitation, indicating a pending or active membership.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>role</code></td>
+<td style="text-align:left"><code>MembershipRole</code></td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">Assigns a predefined access level (MEMBER, ADMIN, OWNER), simplifying common permission structures.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>customRoleId</code></td>
+<td style="text-align:left">String?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Allows for more granular, custom permission sets beyond the standard roles defined in the <code>Role</code> table.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>createdAt</code></td>
+<td style="text-align:left">DateTime?</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">Records when the membership was first established, useful for auditing or onboarding flows.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>Host</code></td>
+<td style="text-align:left"><code>Host[]</code></td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">This relation shows that a membership can be linked to multiple host assignments for various event types.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>AttributeToUser</code></td>
+<td style="text-align:left"><code>AttributeToUser[]</code></td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Links this membership to specific attributes or characteristics assigned to the user within this team.</td>
+</tr>
+</tbody>
+</table>
+<ol start="3">
+<li>
+<p><strong>Column Takeaways</strong>:</p>
+<ul>
+<li>The <code>accepted</code> field is key for an invitation system, preventing users from being members before they explicitly agree.</li>
+<li>The combination of <code>role</code> and <code>customRoleId</code> shows a smart approach to permissions: easy-to-use default roles with the flexibility of custom roles for advanced setups.</li>
+<li>The <code>AttributeToUser</code> relation hints at a robust system for organizations to define and assign custom properties to their members, like skills or departments, which can be used for things like advanced routing.</li>
+</ul>
+</li>
+<li>
+<pre><code class="language-prisma">@@unique([userId, teamId])
+</code></pre>
+<p>This ensures that a user can only be a member of a specific team once, preventing duplicate entries.</p>
+<pre><code class="language-prisma">@@index([teamId])
+</code></pre>
+<p>This speeds up queries to find all members belonging to a particular team.</p>
+<pre><code class="language-prisma">@@index([userId])
+</code></pre>
+<p>This makes it fast to look up all the teams a specific user is a part of.</p>
+<pre><code class="language-prisma">@@index([accepted])
+</code></pre>
+<p>This index helps quickly filter members by their acceptance status, e.g., finding all pending invitations.</p>
+<pre><code class="language-prisma">@@index([role])
+</code></pre>
+<p>This makes it efficient to query for all members with a certain standard role, like all team 'ADMIN's.</p>
+<pre><code class="language-prisma">@@index([customRoleId])
+</code></pre>
+<p>This helps find all members assigned to a particular custom role quickly.</p>
+</li>
+<li>
+<p>This table is well-designed for managing team access, cleverly balancing simplicity with the power of custom roles. The <code>accepted</code> field is a thoughtful touch for managing invitations.</p>
+</li>
+</ol>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Table: Profile — Creates a distinct identity for a user within a particular organization.</div>
+        <div class="scroll"><div class="card-body"><ol>
+<li>Building on <code>Membership</code>, the <code>Profile</code> table allows a single <code>User</code> to have multiple distinct identities or &quot;personas,&quot; each tied to a specific <code>Organization</code> (which is a type of <code>Team</code>), enabling customized settings and usernames per organization.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>uid</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">A stable, system-generated identifier for the profile, useful for external references or data migrations.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>userId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">The core <code>User</code> account this profile is associated with.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>organizationId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">The specific <code>Team</code> (acting as an organization) this profile belongs to, separating user settings per org.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>username</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">The username specifically for <em>this</em> profile within <em>this</em> organization, allowing reuse across different orgs.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>movedFromUser</code></td>
+<td style="text-align:left"><code>User?</code></td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Indicates if this profile was created as part of a migration from a standalone user account.</td>
+</tr>
+</tbody>
+</table>
+<ol start="3">
+<li>
+<p><strong>Column Takeaways</strong>:</p>
+<ul>
+<li>The <code>uid</code> alongside the auto-incrementing <code>id</code> often suggests that <code>uid</code> is used for external-facing identifiers or for robust referencing during complex data operations, while <code>id</code> is for internal database relationships.</li>
+<li>The core idea here is multi-tenancy: a user can be &quot;John Doe&quot; in Organization A with a specific username and settings, and also &quot;John Smith&quot; in Organization B with different ones, all tied to one <code>User</code> record.</li>
+<li>Making <code>username</code> unique <em>per organization</em> (<code>@@unique([username, organizationId])</code>) is a great design choice for platforms with many users and organizations.</li>
+<li>The <code>movedFromUser</code> relation is a strong hint that the product evolved its user identity model, separating global user data from organization-specific profile data—a common pattern in growing platforms.</li>
+</ul>
+</li>
+<li>
+<pre><code class="language-prisma">@@unique([userId, organizationId])
+</code></pre>
+<p>This ensures that a user can only have one unique profile within any given organization, keeping their organizational identity distinct and singular.</p>
+<pre><code class="language-prisma">@@unique([username, organizationId])
+</code></pre>
+<p>This allows the same username (e.g., &quot;johndoe&quot;) to exist in different organizations but enforces uniqueness within a single organization.</p>
+<pre><code class="language-prisma">@@unique([movedToProfileId])
+</code></pre>
+<p>(This unique index is actually on the <code>User</code> table, pointing <em>to</em> <code>Profile</code>). It means a <code>User</code> record can only have been moved <em>to</em> one specific <code>Profile</code> as the target of a migration, ensuring a clean transition.</p>
+<pre><code class="language-prisma">@@index([uid])
+</code></pre>
+<p>This makes lookups by the internal unique ID (<code>uid</code>) efficient, often used for external integrations or immutable references.</p>
+<pre><code class="language-prisma">@@index([userId])
+</code></pre>
+<p>This speeds up queries to find all profiles associated with a particular core <code>User</code> account.</p>
+<pre><code class="language-prisma">@@index([organizationId])
+</code></pre>
+<p>This makes it fast to retrieve all profiles belonging to a specific organization.</p>
+</li>
+<li>
+<p>This is a sophisticated approach to managing user identities in a multi-tenant environment. It adds flexibility for organizations to customize user profiles without forcing users to manage multiple primary accounts. The <code>movedFromUser</code> field is a transparent sign of smart schema evolution.</p>
+</li>
+</ol>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Table: Team — Represents groups of users, ranging from small teams to large organizations, with hierarchical structures and shared settings.</div>
+        <div class="scroll"><div class="card-body"><ol>
+<li>Expanding on the organizational structure, the <code>Team</code> table is the central hub for groups of users, allowing them to collaborate, manage shared <code>EventType</code>s, define billing parameters, and even structure themselves into hierarchies (like departments within a larger company).</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>name</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">The primary, human-readable name of the team or organization.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>slug</code></td>
+<td style="text-align:left">String?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">A URL-friendly identifier for the team, often used for public profile pages.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>isOrganization</code></td>
+<td style="text-align:left">Boolean</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">A critical flag that differentiates a top-level organization from a smaller team that might belong to an organization.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>parentId</code></td>
+<td style="text-align:left">Int?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Establishes a hierarchical relationship, allowing teams to be nested under a parent organization or another team.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>rrResetInterval</code></td>
+<td style="text-align:left"><code>RRResetInterval?</code></td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Defines how frequently round-robin assignment weights are reset, crucial for balanced host distribution.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>rrTimestampBasis</code></td>
+<td style="text-align:left"><code>RRTimestampBasis</code></td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">Determines whether round-robin calculations are based on creation time or event start time.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>metadata</code></td>
+<td style="text-align:left">Json?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">A flexible JSON field for storing additional, schema-less information about the team, allowing for future expansion.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>managedOrganizations</code></td>
+<td style="text-align:left"><code>ManagedOrganization[]</code></td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">This relation indicates if this team is a &quot;manager&quot; organization overseeing other &quot;managed&quot; organizations (e.g., for platform clients).</td>
+</tr>
+</tbody>
+</table>
+<ol start="3">
+<li>
+<p><strong>Column Takeaways</strong>:</p>
+<ul>
+<li>The <code>isOrganization</code> flag is a powerful way to model both organizations and sub-teams within a single table, but requires careful handling in application logic to distinguish between them.</li>
+<li><code>parentId</code> creates a robust hierarchy, allowing for complex organizational structures like departments within a larger company.</li>
+<li>The <code>rrResetInterval</code> and <code>rrTimestampBasis</code> fields are clear indicators of a sophisticated, fair round-robin scheduling system, vital for distributing work evenly among hosts.</li>
+<li><code>metadata</code> and <code>bookingLimits</code> as <code>Json</code> fields offer excellent flexibility for evolving product features without constant database migrations, but they do shift some schema validation responsibility to the application code.</li>
+<li>The <code>managedOrganization</code> relations point to an advanced platform feature, where one organization can act as an administrator or reseller for other organizations, which is a significant product capability.</li>
+</ul>
+</li>
+<li>
+<pre><code class="language-prisma">@@unique([slug, parentId])
+</code></pre>
+<p>This ensures that a team's URL-friendly slug is unique within its immediate parent, meaning different organizations can have a &quot;marketing&quot; team, but you can't have two &quot;marketing&quot; teams under the same parent.</p>
+<pre><code class="language-prisma">@@index([parentId])
+</code></pre>
+<p>This makes it very fast to query for all sub-teams or departments belonging to a specific parent organization.</p>
+</li>
+<li>
+<p>This <code>Team</code> model is highly adaptable, serving as a cornerstone for both simple teams and complex organizational hierarchies. The depth of customization for round-robin scheduling and the <code>managedOrganization</code> feature clearly show a focus on enterprise-level capabilities. Just remember that <code>Json</code> fields require good application-level validation!</p>
+</li>
+</ol>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Table: Host — Configures a specific user's ability to host a particular event type, including their scheduling preferences.</div>
+        <div class="scroll"><div class="card-body"><ol>
+<li>Following the team structure, the <code>Host</code> table details how individual <code>User</code>s are assigned to host specific <code>EventType</code>s, offering granular control over their availability, priority, and participation in sophisticated scheduling algorithms like round-robin.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>userId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">The identifier of the <code>User</code> who is acting as a host.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>eventTypeId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">The specific <code>EventType</code> that this user is configured to host.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>isFixed</code></td>
+<td style="text-align:left">Boolean</td>
+<td style="text-align:left">true</td>
+<td style="text-align:left">Determines if this host is a permanent fixture for the event type or part of a dynamic assignment pool.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>priority</code></td>
+<td style="text-align:left">Int?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">A numerical value indicating preference in host assignment, often used in round-robin scheduling.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>weight</code></td>
+<td style="text-align:left">Int?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Another factor for host assignment, possibly for more nuanced distribution in round-robin or similar algorithms.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>weightAdjustment</code></td>
+<td style="text-align:left">Int?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left"><strong>Deprecated</strong>: A previous method for calibrating host weight, now calculated on-the-spot. Plan to drop this.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>scheduleId</code></td>
+<td style="text-align:left">Int?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Overrides the user's default schedule, allowing this host to use a specific schedule for this <code>EventType</code>.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>groupId</code></td>
+<td style="text-align:left">String?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Connects this host to a <code>HostGroup</code>, likely for managing a collection of hosts together for group events.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>memberId</code></td>
+<td style="text-align:left">Int?</td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Links to the <code>Membership</code> table, providing context about the host's team role when hosting.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>location</code></td>
+<td style="text-align:left"><code>HostLocation?</code></td>
+<td style="text-align:left">false</td>
+<td style="text-align:left">Defines a specific location for this host <em>for this event type</em>, allowing for host-specific location overrides.</td>
+</tr>
+</tbody>
+</table>
+<ol start="3">
+<li>
+<p><strong>Column Takeaways</strong>:</p>
+<ul>
+<li>The <code>@@id([userId, eventTypeId])</code> composite primary key is fundamental: it defines a host's unique identity for a specific event type, preventing them from being configured twice.</li>
+<li><code>isFixed</code>, <code>priority</code>, and <code>weight</code> are key columns that enable advanced scheduling logic, particularly for round-robin assignments, showing a deep focus on balancing bookings among available hosts.</li>
+<li>The <code>weightAdjustment</code> being <code>deprecated</code> tells a story of feature evolution—they tried one approach, learned from it, and now have a better, more dynamic way to handle host calibration.</li>
+<li><code>scheduleId</code> is a great feature, allowing hosts to set tailored availability for specific event types (e.g., always available for quick calls, but restricted for longer meetings).</li>
+<li>The <code>groupId</code> and <code>memberId</code> relations highlight that hosts are often managed within a team context, linking hosting capabilities to team membership and group assignments.</li>
+<li>The <code>HostLocation</code> relation indicates very fine-grained control, allowing locations to be specified <em>per host, per event type</em>, rather than just per event type or user.</li>
+</ul>
+</li>
+<li>
+<pre><code class="language-prisma">@@id([userId, eventTypeId])
+</code></pre>
+<p>This is the primary key for the table, establishing that a specific user can only be configured as a host for a specific event type once.</p>
+<pre><code class="language-prisma">@@index([memberId])
+</code></pre>
+<p>This allows for quick retrieval of all hosting assignments for a particular <code>Membership</code> record (i.e., a specific user within a specific team).</p>
+<pre><code class="language-prisma">@@index([userId])
+</code></pre>
+<p>This speeds up queries to find all event types that a particular user is configured to host.</p>
+<pre><code class="language-prisma">@@index([eventTypeId])
+</code></pre>
+<p>This makes it fast to find all users who are configured to host a specific event type.</p>
+<pre><code class="language-prisma">@@index([scheduleId])
+</code></pre>
+<p>This helps to quickly find all hosts that are utilizing a particular custom schedule for their event types.</p>
+</li>
+<li>
+<p>The <code>Host</code> table demonstrates a robust and highly configurable system for assigning users as event hosts, especially for complex scenarios like round-robin distribution and custom availability. The deprecated <code>weightAdjustment</code> is a practical example of a living schema reflecting product iterations—good to call out for cleanup in the future!</p>
+</li>
+</ol>
+<hr />
+<p>Overall, this schema for Cal.com reveals a highly ambitious and feature-rich product. It's built for complexity, allowing for deep customization at the user, team, and organizational levels, with a clear emphasis on flexible scheduling and multi-tenancy. Good work!</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Booking — Tracks every scheduled meeting or event on the platform</div>
+        <div class="scroll"><div class="card-body"><p>This table is the central record for every appointment, meeting, or event scheduled using the product, holding all the core details about when, where, and with whom it happens.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>uid</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">A public, unique identifier for sharing or referencing specific bookings.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>idempotencyKey</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Prevents accidental duplicate bookings if the same request is sent multiple times, often seen in payment or critical transaction flows.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>userPrimaryEmail</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Records the booker's email at the time of booking, preserving historical data even if their account email changes later.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>title</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The short, descriptive name of the meeting visible to all participants.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>customInputs</code></td>
+<td style="text-align:left"><code>Json?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Stores dynamic answers to questions (like &quot;What's your primary goal?&quot;) configured for the event type.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>startTime</code></td>
+<td style="text-align:left"><code>DateTime</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The exact moment the event is scheduled to begin.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>status</code></td>
+<td style="text-align:left"><code>BookingStatus</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The current state of the booking, such as <code>ACCEPTED</code>, <code>CANCELLED</code>, or <code>PENDING</code>.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>fromReschedule</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Holds the <code>uid</code> of the original booking if this event is a result of a reschedule, creating a history chain.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>metadata</code></td>
+<td style="text-align:left"><code>Json?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">A flexible bucket for storing any additional, unstructured data related to the booking without changing the database schema.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>oneTimePassword</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">A unique, single-use password for guests to securely access their booking details without needing an account.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>isRecorded</code></td>
+<td style="text-align:left"><code>Boolean</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Indicates if the meeting associated with this booking is set up for recording.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>ratingFeedback</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">A text field for participants to leave qualitative feedback about their experience with the booking or meeting.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>creationSource</code></td>
+<td style="text-align:left"><code>CreationSource?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Tracks where the booking originated, such as from the <code>WEBAPP</code> or through an <code>API_V1</code> integration.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The <code>idempotencyKey</code> is a clever addition that helps prevent common issues in distributed systems, especially important for ensuring a single charge or avoiding double-bookings from accidental retries.</li>
+<li>Having <code>customInputs</code> and <code>metadata</code> as <code>Json</code> fields offers incredible flexibility for rapidly adding new data points without constant schema migrations, though it means you rely more on application-level validation.</li>
+<li>The <code>fromReschedule</code> field allows tracing the lineage of a booking, which is fantastic for understanding booking history and providing context in support or analytics.</li>
+<li>Separate fields for <code>cancellationReason</code>, <code>rejectionReason</code>, and <code>reassignReason</code> show that the product clearly distinguishes between different states of a failed or altered booking.</li>
+<li><code>oneTimePassword</code> is an elegant solution for providing guest access to booking details without requiring them to create a full user account.</li>
+</ul>
+<pre><code class="language-prisma">@@unique([uid]) // Ensures every booking has a universally unique identifier for public referencing.
+@@unique([idempotencyKey]) // Guarantees that payment or critical booking requests are processed exactly once.
+@@unique([oneTimePassword]) // Provides a unique and secure way for guests to access their booking details.
+@@index([eventTypeId]) // Speeds up queries to find all bookings of a specific type of event, like &quot;Demo Call&quot;.
+@@index([userId]) // Makes it fast to retrieve all bookings made by a particular user.
+@@index([destinationCalendarId]) // Helps quickly find bookings that are associated with a specific external calendar where they're synced.
+@@index([recurringEventId]) // Optimizes searching for all instances that belong to a particular series of recurring events.
+@@index([uid]) // Provides quick lookup for a booking by its unique identifier.
+@@index([status]) // Enables rapid filtering of bookings based on their current state (e.g., all &quot;pending&quot; bookings).
+@@index([startTime, endTime, status]) // Is key for checking time slot availability, quickly finding events that overlap or are in specific states within a time range.
+@@index([fromReschedule]) // Allows efficient querying to find bookings that originated from a reschedule action.
+@@index([userId, endTime]) // Useful for displaying a user's upcoming or past bookings, ordered by when they conclude.
+@@index([userId, status, startTime]) // Helps retrieve a user's bookings with a specific status, ordered by their start time (e.g., all accepted upcoming meetings).
+@@index([eventTypeId, status]) // Accelerates finding bookings of a particular event type that are in a specific state.
+@@index([userId, createdAt]) // Efficiently fetches a user's booking history, ordered by when the booking was made.
+</code></pre>
+<p>The <code>Booking</code> table is impressively comprehensive, capturing the rich lifecycle of a scheduled event. While the extensive use of JSON fields offers development flexibility, it also shifts some data integrity and validation responsibilities from the database to the application code, which could be a source of future bugs if not meticulously managed.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">DestinationCalendar — Where a user or event type sends new events</div>
+        <div class="scroll"><div class="card-body"><p>This table acts like a smart mail sorter, telling the system exactly which external calendar (like a personal Google Calendar or an Outlook work calendar) new bookings for a user or specific event type should be automatically pushed to.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>integration</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Specifies the external calendar service, such as &quot;google_calendar&quot; or &quot;outlook_calendar&quot;.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>externalId</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The unique identifier for the actual calendar on the external service (e.g., a specific calendar ID in Google).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>primaryEmail</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The email address associated with the external calendar, used for clarity and to confirm identity.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>userId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The user who owns this destination calendar configuration.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>eventTypeId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The specific event type for which this destination calendar is configured, allowing overrides of user defaults.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>credentialId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Links to the authentication details required to access and write to the external calendar.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>delegationCredentialId</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Used when an organization manages calendar access for its members via a central service account.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>customCalendarReminder</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Allows for setting a specific reminder time (in minutes before the event) for events added to this external calendar.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The table's design allows for granular control: a destination calendar can be set for an individual user (all their events) or overridden for a specific <code>eventTypeId</code>.</li>
+<li>Support for both <code>credentialId</code> and <code>delegationCredentialId</code> indicates the system handles both individual user connections and organizational delegation for calendar management.</li>
+<li><code>integration</code> and <code>externalId</code> provide a universal way to identify and interact with calendars from various providers.</li>
+<li>The <code>customCalendarReminder</code> field suggests a user-friendly feature allowing customization of notification settings at the integration point.</li>
+</ul>
+<pre><code class="language-prisma">@@unique([userId]) // Ensures each user has only one default destination calendar configured for all their events.
+@@unique([eventTypeId]) // Ensures each event type can have only one specific destination calendar configured, overriding user defaults.
+@@index([userId]) // Allows for rapid lookup of a user's primary destination calendar.
+@@index([eventTypeId]) // Speeds up queries to find the specific destination calendar for an event type.
+@@index([credentialId]) // Helps efficiently find destination calendars that are using a particular set of authentication credentials.
+</code></pre>
+<p>The <code>DestinationCalendar</code> table clearly distinguishes between user-level and event-type-level calendar targets, which is a powerful feature for flexibility. However, the <code>@@unique</code> constraints on both <code>userId</code> and <code>eventTypeId</code> mean that a user or event type can <em>only</em> have one primary destination calendar. If the product ever needs to support pushing a single booking to <em>multiple</em> external calendars by default, this design would require significant modification or a workaround.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">SelectedCalendar — Which external calendars the system reads for availability</div>
+        <div class="scroll"><div class="card-body"><p>In contrast to <code>DestinationCalendar</code>, this table is about listening: it tells the system which external calendars to <em>monitor</em> for a user's existing commitments, so the system knows when that user is busy and shouldn't be booked.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>userId</code></td>
+<td style="text-align:left"><code>Int</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The user whose availability is being determined by reading this external calendar.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>integration</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Identifies the external calendar service (e.g., &quot;google_calendar&quot;, &quot;outlook_calendar&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>externalId</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The unique ID of the specific calendar on the external service to be read.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>credentialId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The authentication details required to access and read events from this external calendar.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>channelId</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">A unique identifier for the push notification channel, enabling real-time updates when the external calendar changes.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>channelExpiration</code></td>
+<td style="text-align:left"><code>DateTime?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The timestamp when the push notification channel is expected to expire, requiring renewal.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>syncToken</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">A token used to retrieve only changed events since the last sync, optimizing data transfer.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>syncedAt</code></td>
+<td style="text-align:left"><code>DateTime?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Records the last successful synchronization time, crucial for monitoring data freshness.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>error</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Stores the last error message encountered during calendar synchronization or watching.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>watchAttempts</code></td>
+<td style="text-align:left"><code>Int</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Counts how many times the system has tried to establish or renew a watch (push notification) channel for this calendar.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>eventTypeId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">If this calendar is only used for availability checks for a specific event type, rather than for all the user's event types.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>delegationCredentialId</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Used when an organization centrally manages access to member calendars for availability checking.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>calendarCacheEvents</code></td>
+<td style="text-align:left"><code>CalendarCacheEvent[]</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Relation to the cached events from this calendar, which speeds up availability calculations.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The wealth of <code>channel*</code>, <code>sync*</code>, <code>error</code>, and <code>attempt</code> fields indicates a highly robust and sophisticated system for maintaining real-time, reliable availability information from external calendars.</li>
+<li>The <code>eventTypeId</code> being optional allows for flexible configuration: a calendar can be selected to inform availability for <em>all</em> of a user's event types, or only for a specific one.</li>
+<li>The transition from <code>googleChannelId</code> to more generic <code>channelId</code> suggests a move towards provider-agnostic calendar synchronization, which is good for future extensibility.</li>
+<li><code>watchAttempts</code>, <code>unwatchAttempts</code>, and <code>maxAttempts</code> clearly show that the system has built-in retry mechanisms for resilient integration with external APIs.</li>
+</ul>
+<pre><code class="language-prisma">@@unique([userId, integration, externalId, eventTypeId]) // Prevents a user from selecting the exact same external calendar more than once for the same event type.
+@@unique([googleChannelId, eventTypeId]) // A legacy unique constraint for Google Calendar watch channels, likely maintained during a migration.
+@@index([userId]) // Quickly finds all external calendars a user has chosen for availability checks.
+@@index([externalId]) // Allows searching for selected calendars using their unique ID from the external provider.
+@@index([eventTypeId]) // Helps locate all selected calendars that are relevant to a specific type of event.
+@@index([credentialId]) // Speeds up queries for selected calendars that rely on a particular set of authentication credentials.
+@@index([channelId]) // Efficiently retrieves selected calendars based on their push notification channel ID.
+@@index([integration, googleChannelExpiration, error, watchAttempts, maxAttempts], name: &quot;SelectedCalendar_watch_idx&quot;) // Optimizes queries for identifying which calendars need their watch channels renewed or re-established due to errors or expiry.
+@@index([integration, googleChannelExpiration, error, unwatchAttempts, maxAttempts], name: &quot;SelectedCalendar_unwatch_idx&quot;) // Facilitates finding calendars that need their watch channels actively stopped, potentially after a user removes them.
+</code></pre>
+<p>The <code>SelectedCalendar</code> table showcases an impressive commitment to accurate, real-time availability. The robust synchronization and error handling fields are excellent for building a reliable product. The simultaneous presence of specific <code>googleChannel*</code> fields and generic <code>channel*</code> fields, however, points to some ongoing refactoring or legacy burden that could introduce confusion if not carefully documented and managed.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Attendee — Who is coming to a specific booking</div>
+        <div class="scroll"><div class="card-body"><p>This table captures the details of individual people who are guests or participants in a specific booking, ensuring that their information is recorded as it was at the time of the event.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>email</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The email address of the attendee, essential for communication.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>name</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The full name of the attendee, used for personalization.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>timeZone</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The attendee's local time zone, crucial for displaying event times correctly.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>phoneNumber</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">An optional phone number, possibly for SMS reminders or direct contact.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>locale</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The attendee's preferred language, for localized communications.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>bookingId</code></td>
+<td style="text-align:left"><code>Int?</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The specific booking this attendee is associated with.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>noShow</code></td>
+<td style="text-align:left"><code>Boolean?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">A flag indicating whether the attendee failed to show up for the event.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The table captures essential contact and logistical details (<code>email</code>, <code>name</code>, <code>timeZone</code>) directly, ensuring that historical records of who attended a booking remain accurate even if their user profile details change later.</li>
+<li>The <code>phoneNumber</code> and <code>locale</code> fields enable advanced communication features like SMS reminders and localized messages for attendees.</li>
+<li>The <code>noShow</code> flag is a straightforward way to track attendance, which can be useful for performance metrics or internal reporting for hosts.</li>
+<li>This table focuses specifically on the role of an attendee in a booking, distinguishing them from a general <code>User</code> account.</li>
+</ul>
+<pre><code class="language-prisma">@@index([email]) // Quickly finds all bookings that a specific email address is associated with.
+@@index([bookingId]) // Efficiently retrieves all attendees who are part of a particular booking.
+@@index([email, bookingId]) // Optimizes queries to check if a specific email is already an attendee for a particular booking, or to find a precise attendee record.
+</code></pre>
+<p>The <code>Attendee</code> table is well-designed for its purpose, clearly storing the necessary information for each participant in a booking. Capturing these details directly within the <code>Attendee</code> record, rather than solely linking to a <code>User</code> profile, is a smart decision for data integrity and historical accuracy, as guest information might not always correspond to a registered user. The <code>bookingId</code> being optional, however, is a minor concern; typically, an attendee should always be tied to a booking, and making it optional could allow for records that are not fully contextualized without additional application-level checks.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Payment — records financial transactions for a booking</div>
+        <div class="scroll"><div class="card-body"><p>This table tracks all the money that flows in and out for a specific booking. Think of it as your digital ledger for each transaction.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>uid</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">A unique ID for the payment, useful for external references or idempotency.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>appId</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The specific payment app (e.g., Stripe, PayPal) used to process this payment.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>amount</code></td>
+<td style="text-align:left"><code>Int</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The total amount of money, stored in the smallest unit (like cents).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>fee</code></td>
+<td style="text-align:left"><code>Int</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Any processing fees associated with the transaction.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>currency</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The currency code (e.g., &quot;usd&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>success</code></td>
+<td style="text-align:left"><code>Boolean</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Whether the payment completed successfully.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>data</code></td>
+<td style="text-align:left"><code>Json</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Raw data from the payment provider, offering flexibility.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>externalId</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The ID of this transaction in the external payment system.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>paymentOption</code></td>
+<td style="text-align:left"><code>PaymentOption?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">How the payment was handled (e.g., taken immediately or put on hold).</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Financial Safety First:</strong> Storing <code>amount</code> and <code>fee</code> as <code>Int</code> is a smart, standard practice. It avoids tricky floating-point arithmetic errors that can cause real problems with money.</li>
+<li><strong>Flexible Integrations:</strong> The <code>appId</code> being a relation to the <code>App</code> model means they can easily plug in new payment gateways without changing this table's structure, which is very clever.</li>
+<li><strong>Catch-All for Details:</strong> The <code>data</code> column using <code>Json</code> is super flexible for storing all the unique bits and bobs from different payment providers. This keeps the schema clean but means you have to parse JSON every time you want a specific detail.</li>
+<li><strong>External Traceability:</strong> <code>externalId</code> is vital for looking up transactions directly in the payment provider's system.</li>
+<li><strong>Payment Flow Options:</strong> <code>paymentOption</code> indicates that there are different ways payments can be processed (e.g., immediately or later), which suggests more complex booking flows.</li>
+</ul>
+<pre><code class="language-prisma">@@index([bookingId])
+</code></pre>
+<p>This makes it fast to find all payment records related to a specific booking.</p>
+<pre><code class="language-prisma">@@index([externalId])
+</code></pre>
+<p>This allows quick lookups using the transaction ID provided by the external payment service.</p>
+<p><strong>Design Critique:</strong>
+Storing <code>amount</code> and <code>fee</code> as integers (likely in minor currency units) is a best practice that avoids common financial precision issues, which is excellent. The <code>data</code> field's <code>Json</code> type provides immense flexibility for integrating with various payment providers, but it does mean that querying specific pieces of payment metadata will require more complex, and potentially less performant, application logic.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">BookingReference — how a booking connects to external tools</div>
+        <div class="scroll"><div class="card-body"><p>Moving on from payments, this table is about connecting your bookings to all the other tools you use, like Zoom or Google Calendar. It's like a universal adapter for your scheduling system.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>type</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">What kind of external reference this is (e.g., &quot;Zoom&quot;, &quot;Google Calendar&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>uid</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">A unique ID that this external system uses for the reference.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>meetingId</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The ID of the meeting on the video conferencing platform.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>thirdPartyRecurringEventId</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">If it's a recurring event, the ID of the recurring series in the external calendar.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>meetingPassword</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Password needed to join the meeting, if any.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>meetingUrl</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The direct link to join the meeting.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>externalCalendarId</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The ID of the event in the external calendar.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>deleted</code></td>
+<td style="text-align:left"><code>Boolean?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">A flag indicating if this external reference has been logically &quot;deleted&quot;.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Integration Flexibility:</strong> This table is designed to handle various types of external integrations, from video calls to calendar events, showing a versatile architecture.</li>
+<li><strong>External ID Consistency:</strong> Using <code>type</code> and <code>uid</code> together helps uniquely identify external resources across different platforms, which is crucial for managing integrations effectively.</li>
+<li><strong>Partial Information:</strong> Many fields are nullable (<code>meetingId</code>, <code>meetingPassword</code>, etc.), reflecting that not every external service provides all types of information, or they might only be relevant for specific integration <code>type</code>s.</li>
+<li><strong>Soft Deletion:</strong> The <code>deleted</code> boolean is a nice touch for soft-deleting external references. Instead of immediately removing them, you mark them as deleted, which is safer for data synchronization and recovery.</li>
+</ul>
+<pre><code class="language-prisma">@@index([bookingId])
+</code></pre>
+<p>This quickly finds all external references tied to a specific booking.</p>
+<pre><code class="language-prisma">@@index([type])
+</code></pre>
+<p>This speeds up queries when you want to find all references of a particular external service, like all Zoom meetings.</p>
+<pre><code class="language-prisma">@@index([uid])
+</code></pre>
+<p>This makes it efficient to look up a specific external reference by its unique identifier.</p>
+<p><strong>Design Critique:</strong>
+This table is well-suited for a product that integrates with many external services, bringing all relevant booking links into one place. The <code>deleted</code> flag for soft-deleting external references is a good pattern for data resilience. However, the numerous nullable string fields (like <code>meetingId</code>, <code>meetingUrl</code>, <code>externalCalendarId</code>) mean that the application logic needs to be careful about which fields are expected for which <code>type</code> of reference, potentially adding complexity to how these details are consumed.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Tracking — how users found this booking</div>
+        <div class="scroll"><div class="card-body"><p>Next, the <code>Tracking</code> table focuses on marketing and analytics. It's like asking &quot;How did you hear about us?&quot; for every single booking, but automatically.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>utm_source</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Where the user came from (e.g., &quot;google&quot;, &quot;facebook&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>utm_medium</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The marketing channel (e.g., &quot;cpc&quot; for paid search, &quot;email&quot; for a newsletter).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>utm_campaign</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">The specific campaign that led to the booking (e.g., &quot;holiday_promo&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>utm_term</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Keywords used in paid search ads.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>utm_content</code></td>
+<td style="text-align:left"><code>String?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Helps differentiate similar content or links within the same ad.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Marketing Attribution:</strong> This table directly supports understanding which marketing efforts are driving bookings, which is crucial for business intelligence.</li>
+<li><strong>Standardized Approach:</strong> Using the familiar UTM parameters means they're following established web analytics conventions, making integration with tools like Google Analytics straightforward.</li>
+<li><strong>Optional Data:</strong> All fields are nullable, which is expected since not every booking will originate from a tracked marketing link. This avoids cluttering records where no specific tracking data exists.</li>
+<li><strong>Immutable for Booking:</strong> The <code>@@unique([bookingId])</code> constraint ensures that once a booking is made, its tracking source is captured once and doesn't change, providing a consistent record.</li>
+</ul>
+<pre><code class="language-prisma">@@unique([bookingId])
+</code></pre>
+<p>This ensures that each booking has exactly one tracking record associated with it, allowing for fast lookup of a booking's origin.</p>
+<p><strong>Design Critique:</strong>
+This table provides a clean and essential mechanism for capturing marketing attribution directly tied to bookings. The use of standard UTM parameters is sensible for quick integration with analytics platforms. The <code>@@unique([bookingId])</code> constraint is a solid choice for data integrity, ensuring a 1:1 relationship, but it implies that any need for <em>multiple</em> tracking data points per booking (e.g., first touch vs. last touch) would require a different design.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">BookingAudit — the definitive history of a booking</div>
+        <div class="scroll"><div class="card-body"><p>Finally, <code>BookingAudit</code> is like a meticulous detective's notebook for every booking. It logs every important action taken, who took it, and when, creating an unchangeable record.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>bookingUid</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The unique ID of the booking. Crucially, it's <em>not</em> a foreign key.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>actorId</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The ID of the <code>AuditActor</code> (user, guest, system) who performed the action.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>type</code></td>
+<td style="text-align:left"><code>BookingAuditType</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The broad category of the event (e.g., &quot;record created,&quot; &quot;record updated&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>action</code></td>
+<td style="text-align:left"><code>BookingAuditAction</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The specific event (e.g., &quot;created,&quot; &quot;cancelled,&quot; &quot;rescheduled&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>timestamp</code></td>
+<td style="text-align:left"><code>DateTime</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The actual time the business event happened, not just when it was logged.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>source</code></td>
+<td style="text-align:left"><code>BookingAuditSource</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Where the action originated (e.g., &quot;webapp,&quot; &quot;api_v1,&quot; &quot;system&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>operationId</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">A unique ID to group related audit events, like all changes in one bulk update.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>data</code></td>
+<td style="text-align:left"><code>Json?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Specific details about the change (e.g., old vs. new values).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>context</code></td>
+<td style="text-align:left"><code>Json?</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">General context like IP address, user agent, or if it was an impersonation.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Immutable History:</strong> <code>bookingUid</code> being a plain string without a foreign key is a brilliant and crucial design decision. It guarantees that the audit trail remains intact and complete even if the actual <code>Booking</code> record is deleted, which is fundamental for compliance and historical integrity.</li>
+<li><strong>Actor Anonymization/Retention:</strong> Linking to <code>AuditActor</code> (which also avoids direct foreign keys to <code>User</code> or <code>Attendee</code>) ensures that audit records persist even if users/attendees are deleted or anonymized, while still identifying who took the action.</li>
+<li><strong>Event vs. Logging Time:</strong> Distinguishing <code>timestamp</code> (when the event <em>occurred</em>) from <code>createdAt</code> (when the audit record was <em>saved</em>) shows a mature understanding of asynchronous systems and data integrity for audit logs.</li>
+<li><strong>Granular Categorization:</strong> The combination of <code>type</code> and <code>action</code> allows for a very detailed classification of events, making it easier to filter and understand the audit trail.</li>
+<li><strong>Correlation of Actions:</strong> The <code>operationId</code> is a very clever addition for debugging and tracking complex workflows, allowing you to trace all related audit events from a single logical operation.</li>
+<li><strong>Rich Context:</strong> The <code>data</code> and <code>context</code> <code>Json</code> fields are highly flexible for storing all pertinent details, from specific field changes to general request metadata.</li>
+</ul>
+<pre><code class="language-prisma">@@index([actorId])
+</code></pre>
+<p>This speeds up finding all actions performed by a particular actor in the system.</p>
+<pre><code class="language-prisma">@@index([bookingUid])
+</code></pre>
+<p>This is essential for quickly retrieving the complete history of changes for any given booking.</p>
+<pre><code class="language-prisma">@@index([timestamp])
+</code></pre>
+<p>This makes it efficient to query for audit events that occurred within a specific time period.</p>
+<pre><code class="language-prisma">@@index([operationId])
+</code></pre>
+<p>This is useful for quickly finding all related audit logs belonging to a single logical, multi-step operation.</p>
+<p><strong>Design Critique:</strong>
+This <code>BookingAudit</code> table is exceptionally well-conceived for a system that demands robust auditing and data integrity. The intentional denormalization of <code>bookingUid</code> and the <code>AuditActor</code> pattern are particularly strong choices for preserving historical records through data lifecycles. While the extensive use of <code>Json</code> for <code>data</code> and <code>context</code> sacrifices some direct queryability for flexibility, for an audit log where the primary goal is immutable storage and historical retrieval, this is a very sound and effective trade-off. This is a model for how to implement an enterprise-grade audit trail.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">BookingReport — Tracking issues with scheduled bookings</div>
+        <div class="scroll"><div class="card-body"><p>This table is where we store reports from users about specific bookings, usually for things like spam, unrecognized attendees, or other problems. It’s our way of giving users a voice when something goes wrong with a booking.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>bookingUid</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The unique ID of the booking being reported, used to reference it even if the booking record is deleted.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>bookerEmail</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The email address of the person who made the booking, essential for identifying and potentially blocking them.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>reason</code></td>
+<td style="text-align:left"><code>BookingReportReason</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Categorizes <em>why</em> the booking was reported (e.g., &quot;spam&quot;, &quot;don't know person&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>description</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Allows the reporter to provide additional context or details about the issue.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>status</code></td>
+<td style="text-align:left"><code>BookingReportStatus</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Tracks the current state of <em>this specific report</em> in our internal review process (e.g., &quot;pending&quot;, &quot;blocked&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>systemStatus</code></td>
+<td style="text-align:left"><code>SystemReportStatus</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Tracks the <em>global platform-wide</em> review status of the reported issue (e.g., &quot;pending&quot;, &quot;blocked&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>watchlistId</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">If the booker was added to an organization's blocklist, this links to that entry.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>globalWatchlistId</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">If the booker was added to the platform's <em>global</em> blocklist, this links to that entry.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Takeaways:</strong>
+<ul>
+<li><strong>Immutability for Audit:</strong> Storing <code>bookingUid</code> directly as a <code>String</code> instead of a foreign key is a clever move. If a booking is deleted, the report still has a record of <em>which</em> booking it was about, preserving our audit trail.</li>
+<li><strong>Two-Tiered Moderation:</strong> The distinction between <code>status</code> (for the individual report) and <code>systemStatus</code> (for a broader, platform-level assessment) shows we have a robust, multi-layered approach to content moderation.</li>
+<li><strong>Proactive Blocking:</strong> Including <code>bookerEmail</code> directly makes it straightforward to add problematic bookers to watchlists.</li>
+<li><strong>Watchlist Integration:</strong> Directly linking to <code>watchlistId</code> and <code>globalWatchlistId</code> highlights a strong integration with our blocking mechanisms, allowing us to quickly see if a reported booker has been actioned.</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-prisma">@@unique([bookingUid]) // Ensures that each booking can only have one report associated with it, preventing duplicate reports for the same booking.
+@@index([bookerEmail]) // Speeds up searches for all reports related to a specific booker's email, useful for identifying repeat offenders.
+@@index([reportedById]) // Makes it fast to find all reports submitted by a particular user.
+@@index([organizationId]) // Helps quickly retrieve all reports pertaining to a specific organization.
+@@index([watchlistId]) // Optimizes queries for reports that led to an organization-specific watchlist entry.
+@@index([globalWatchlistId]) // Speeds up finding reports that resulted in a global watchlist entry.
+@@index([systemStatus]) // Enables quick filtering of reports based on their current system review state, allowing admins to prioritize.
+@@index([createdAt]) // Allows for efficient chronological browsing or analysis of reports.
+</code></pre>
+<p>This table is well-designed for a moderation system, with careful thought given to audit trails and actionability. However, the <code>reportedById</code> being optional could allow for completely anonymous reports, which might complicate abuse prevention or require system-initiated reports, so we need to be clear about the expected flow here.</p>
+<hr />
+<p>Moving on, the <code>HostLocation</code> table introduces the concept of <em>where</em> a meeting actually happens, letting hosts define specific locations for their event types.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">HostLocation — Defining where a host meets for a particular event type</div>
+        <div class="scroll"><div class="card-body"><p>This table stores the specific meeting details – whether it’s a virtual meeting link, a physical address, or a phone number – for a given host and their specific event type.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>userId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Identifies the user who is hosting the event.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>eventTypeId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Links this location to a specific type of event, allowing different event types to have different meeting places.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>type</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Describes the category of the location (e.g., &quot;Google Meet&quot;, &quot;Zoom&quot;, &quot;Physical&quot;, &quot;Phone Call&quot;).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>credentialId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">If the location requires integration credentials (like for a specific video conferencing tool), this links to it.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>link</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Stores the URL for virtual meeting platforms.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>address</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Stores the physical street address for in-person meetings.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>phoneNumber</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Stores the phone number for call-in meetings.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Takeaways:</strong>
+<ul>
+<li><strong>Per-Event Customization:</strong> The combination of <code>userId</code> and <code>eventTypeId</code> as a unique identifier means that a single host can have different preferred locations for different types of meetings. For example, a &quot;Discovery Call&quot; might be a Zoom link, while an &quot;On-Site Visit&quot; has a physical address.</li>
+<li><strong>Flexible Location Types:</strong> The schema accommodates various meeting modalities (virtual, physical, phone) within a single table by making specific location fields (<code>link</code>, <code>address</code>, <code>phoneNumber</code>) optional. This prevents needing separate tables for each type.</li>
+<li><strong>Integration Support:</strong> The <code>credentialId</code> column is crucial for tying locations to external services, ensuring that secure authentication is handled separately.</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-prisma">@@unique([userId, eventTypeId]) // Crucially ensures that a host can only define *one* location configuration for any given event type, making retrieval unambiguous.
+@@index([credentialId]) // Allows for quickly finding all host locations that utilize a particular integration credential.
+@@index([eventTypeId]) // Speeds up fetching all host locations configured for a specific event type, regardless of the host.
+</code></pre>
+<p>This table uses a smart compound unique key (<code>userId</code>, <code>eventTypeId</code>) to allow granular control over host locations. My only caution here is using a generic <code>type</code> string; while flexible, it could lead to data inconsistencies if not carefully managed by the application code (e.g., &quot;Zoom&quot; vs. &quot;zoom.us&quot;). An enum would be more restrictive but also more consistent.</p>
+<hr />
+<p>The <code>Availability</code> table is central to our scheduling logic, defining the slots when users or event types are open for business.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Availability — Defining when a user or event type can be booked</div>
+        <div class="scroll"><div class="card-body"><p>This table specifies the timeframes during which a user or a particular event type is available for bookings, whether it's on a recurring weekly schedule or a specific one-off date.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>userId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Associates this availability rule with a specific user.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>eventTypeId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Associates this availability rule with a specific event type, potentially overriding user defaults.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>days</code></td>
+<td style="text-align:left">Int[]</td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">An array of integers representing the days of the week (0=Sunday, 6=Saturday) for recurring slots.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>startTime</code></td>
+<td style="text-align:left"><code>DateTime</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The start time of the available slot on a given day, storing only the time component.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>endTime</code></td>
+<td style="text-align:left"><code>DateTime</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">The end time of the available slot on a given day, storing only the time component.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>date</code></td>
+<td style="text-align:left"><code>DateTime</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">For availability on a specific calendar date, overriding any recurring <code>days</code> rules.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>scheduleId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Links this availability rule to a named <code>Schedule</code> for easier management and grouping.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Takeaways:</strong>
+<ul>
+<li><strong>Flexible Scoping:</strong> Both <code>userId</code> and <code>eventTypeId</code> are optional, but in practice, at least one must be present. This allows for defining general user availability that applies to all their events, <em>or</em> event-specific availability that overrides the general settings.</li>
+<li><strong>Recurring vs. One-Off:</strong> The <code>days</code> array handles recurring weekly schedules, while the <code>date</code> field allows for specific day overrides or additions. This is essential for managing complex calendars (e.g., &quot;I'm available every Monday, but specifically this Tuesday too&quot;).</li>
+<li><strong>Time-Only Storage:</strong> Using <code>@db.Time</code> for <code>startTime</code> and <code>endTime</code> correctly focuses on the time-of-day component, ignoring the date, which is perfect for recurring daily slots.</li>
+<li><strong>Schedule Grouping:</strong> The <code>scheduleId</code> is a nice abstraction to group sets of availability rules, which is useful if users have different &quot;working week&quot; schedules (e.g., &quot;Regular Schedule&quot;, &quot;Vacation Schedule&quot;).</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-prisma">@@index([userId]) // Enables fast retrieval of all availability rules configured for a particular user.
+@@index([eventTypeId]) // Speeds up finding all availability rules set specifically for a certain event type.
+@@index([scheduleId]) // Optimizes queries for availability rules that belong to a named schedule.
+</code></pre>
+<p>The flexibility to define availability at both the user and event-type level, and to combine recurring <code>days</code> with specific <code>date</code> overrides, is very powerful. The primary challenge, which isn't a schema flaw but an application one, will be implementing the complex logic to resolve these rules into a final set of available booking slots. We'll need to define clear precedence for how <code>date</code> overrides <code>days</code>, and how <code>eventTypeId</code> availability overrides <code>userId</code> availability.</p>
+<hr />
+<p>Finally, <code>AuditActor</code> is a foundational table for ensuring we have a complete and reliable history of who did what.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">AuditActor — Central registry of entities performing auditable actions</div>
+        <div class="scroll"><div class="card-body"><p>This table acts as a definitive list of all possible actors – whether a registered user, an event attendee, an integrated app, or an internal system process – that can perform actions within our system, designed to maintain an immutable record of activity.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Column</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Required</th>
+<th style="text-align:left">Why it exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>type</code></td>
+<td style="text-align:left"><code>AuditActorType</code></td>
+<td style="text-align:left">Yes</td>
+<td style="text-align:left">Categorizes the type of actor (e.g., <code>USER</code>, <code>GUEST</code>, <code>SYSTEM</code>, <code>APP</code>).</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>userUuid</code></td>
+<td style="text-align:left"><code>String</code></td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">For <code>USER</code> type, stores the UUID of the user. This is a &quot;soft reference&quot; to allow user deletion without breaking audits.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>attendeeId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">For <code>ATTENDEE</code> type, stores the ID of the attendee. Another &quot;soft reference.&quot;</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>credentialId</code></td>
+<td style="text-align:left">Int</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">For <code>APP</code> type, stores the ID of the credential used by the app. Also a &quot;soft reference.&quot;</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>email</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Stores the email address for actors like <code>GUEST</code>, or as a fallback if a referenced record (user, attendee) is deleted.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>phone</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Stores the phone number for actors like <code>GUEST</code>, or as a fallback if a referenced record (user, attendee) is deleted.</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>name</code></td>
+<td style="text-align:left">String</td>
+<td style="text-align:left">No</td>
+<td style="text-align:left">Stores the name for actors like <code>GUEST</code>, or as a fallback if a referenced record (user, attendee) is deleted.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Takeaways:</strong>
+<ul>
+<li><strong>Immutable Audit Trail (Critical!):</strong> The use of &quot;soft references&quot; for <code>userUuid</code>, <code>attendeeId</code>, and <code>credentialId</code> (i.e., not actual foreign key constraints with <code>onDelete: Cascade</code>) is <strong>extremely clever and important</strong>. It means if a user, attendee, or credential record is deleted from the main tables, the audit log entries linked via <code>AuditActor</code> <em>do not break</em>. The historical record remains intact, which is paramount for compliance and forensics.</li>
+<li><strong>Redundant Identifiers:</strong> The <code>email</code>, <code>phone</code>, and <code>name</code> fields serve as direct identifiers for non-registered actors (like guests) and as a crucial fallback for other types if their primary referenced records are purged.</li>
+<li><strong>Unified Actor Management:</strong> This table centralizes the concept of &quot;who did this,&quot; simplifying the <code>BookingAudit</code> table by giving it a single <code>actorId</code> reference.</li>
+<li><strong>Strong Uniqueness:</strong> The multiple <code>@@unique</code> constraints (on <code>userUuid</code>, <code>attendeeId</code>, <code>credentialId</code>, <code>email</code>, <code>phone</code>) ensure that each distinct actor or their primary identifier is represented by only one <code>AuditActor</code> entry, maintaining data integrity.</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-prisma">@@unique([userUuid]) // Ensures that each registered user has only one corresponding audit actor entry, preventing duplicates.
+@@unique([attendeeId]) // Ensures that each attendee has only one corresponding audit actor entry.
+@@unique([credentialId]) // Ensures that each app credential has only one corresponding audit actor entry.
+@@unique([email]) // Prevents duplicate audit actor entries based solely on email, useful for guests.
+@@unique([phone]) // Prevents duplicate audit actor entries based solely on phone number.
+@@index([email]) // Speeds up searches for audit actors using their email address.
+@@index([userUuid]) // Optimizes lookups for audit actors based on their user UUID.
+@@index([attendeeId]) // Enhances performance when querying for audit actors based on attendee ID.
+@@index([credentialId]) // Accelerates searches for audit actors linked to a specific credential.
+</code></pre>
+<p>This <code>AuditActor</code> table is a standout piece of design for an audit log. The &quot;soft reference&quot; strategy for preserving historical integrity is a best practice often overlooked, and it's well-executed here. The explicit <code>onDelete: Restrict</code> in <code>BookingAudit</code> (referencing <code>AuditActor</code>) further tightens this, ensuring an <code>AuditActor</code> isn't removed if it's still linked to any audit records. This is a very robust and well-thought-out foundation for an immutable audit system.</p>
+</div></div>
+      </li>
+    </ul>
+    <div class="sec-head">
+      <span class="sec-n">04</span>
+      <div class="sec-label">Migration history</div>
+      <div class="sec-note">the roadmap the live schema erases</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section catalogues the 595 database migrations, offering a timeline that reveals Cal.com's product evolution and the architectural changes in its data model. It provides insight into the iterative development that shaped the live schema and its current capabilities.</p>
+</div>
+    <ul class="rail acts">
+      <li class="card">
+        <div class="card-top">Act 1 — Core Scheduling &amp; Personal Profiles (June - Dec 2021)</div>
+        <div class="scroll"><div class="card-body"><p>opener <code>20210605225044_init</code>
+In its earliest days, our product established the fundamental capability of scheduling and managing meetings. Users could create various event types, set their availability with buffer times, and allow others to book time slots. The system quickly evolved to support custom branding, payment collection for events, and basic team collaboration, allowing multiple users to manage bookings together. By the end of this period, a significant upgrade (<code>upgrade_to_v3</code>) set the stage for future growth.</p>
+<pre class="mermaid">flowchart LR
+  A["Manual scheduling"] --> B["Self-service bookings"]
+  B --> C["Custom event types"]
+  C --> D["Basic team features"]
+</pre>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Act 2 — Advanced Scheduling, Integrations &amp; Automation (Jan - Dec 2022)</div>
+        <div class="scroll"><div class="card-body"><p>Building on its foundation, the platform began offering more flexible scheduling and automation for individuals and small teams. This included handling <code>dynamic_group_booking</code> for multiple attendees and <code>recurring_event</code> types. A major leap was made with the introduction of <code>adds_apps</code>, enabling an ecosystem for third-party integrations, and critically, <code>add_workflows</code>, which allowed users to automate tasks around their bookings. Analytics and more refined routing forms also started to emerge, transforming the product into a more comprehensive automation tool.</p>
+<pre class="mermaid">flowchart LR
+  A["Simple scheduling"] --> B["Group & recurring events"]
+  B --> C["Third-party Apps"]
+  C --> D["Automated Workflows"]
+</pre>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Act 3 — Scaling Teams, Enterprise Features &amp; Platform Growth (Jan - Dec 2023)</div>
+        <div class="scroll"><div class="card-body"><p>Moving beyond individual and small team automation, the product evolved to serve larger organizations. The crucial <code>organizations</code> migration introduced a hierarchical structure where multiple teams could operate under a single umbrella. This phase saw features like <code>managed_events</code> for centralized administrative control, <code>paid_apps</code> to monetize the integration ecosystem, and <code>whatsapp_workflow</code> for new communication channels. Enhanced security features, such as <code>add_backup_codes</code>, were also added, signifying a shift towards enterprise-grade readiness.</p>
+<pre class="mermaid">flowchart LR
+  A["Individual teams"] --> B["Organizations"]
+  B --> C["Managed event types"]
+  C --> D["Paid App integrations"]
+</pre>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Act 4 — Enterprise-grade Platform &amp; AI Tools (Jan - April 2024)</div>
+        <div class="scroll"><div class="card-body"><p>The system further matured into a full-fledged enterprise platform, integrating deeply with organizational infrastructure. The <code>add_dsync_data</code> migration introduced Directory Synchronization (DSync), allowing organizations to sync user and group information from their existing identity providers. This period also marked the rollout of <code>platform_wide_webhooks</code> for comprehensive event notification, a <code>tasker_feature</code> for automating internal operations, and early <code>add_ai_phone_call_config</code>, demonstrating an investment in AI-powered communication. <code>Platform billing</code> consolidated financial management across the entire ecosystem.</p>
+<pre class="mermaid">flowchart LR
+  A["Org-level settings"] --> B["Directory Sync"]
+  B --> C["Platform-wide automation"]
+  C --> D["Centralized billing"]
+</pre>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Act 5 — Advanced Enterprise Security &amp; Internationalization (May - Dec 2024)</div>
+        <div class="scroll"><div class="card-body"><p>Focusing on advanced security, data governance, and global reach, the platform enhanced its enterprise capabilities. Key developments included <code>add_event_type_translation_model</code>, enabling multilingual event descriptions for a global audience, and <code>scim_attributes_sync_related_attrs_added</code> for robust user provisioning and de-provisioning based on industry standards. Security was bolstered with <code>add_watchlist</code> to flag suspicious activities and <code>add_dwd</code> (Domain-Wide Delegation) for fine-grained calendar access control, particularly vital for large organizations. The <code>add_salesforce_crm_tasker</code> migration deepened integration with enterprise sales tools.</p>
+<pre class="mermaid">flowchart LR
+  A["Basic security"] --> B["SCIM user provisioning"]
+  B --> C["Domain-wide calendar delegation"]
+  C --> D["Watchlist security"]
+</pre>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Act 6 — Granular Access Control, AI Expansion &amp; Ecosystem Maturity (Jan - Aug 2025)</div>
+        <div class="scroll"><div class="card-body"><p>The platform reached a new level of sophistication, offering fine-grained control and deeper AI integration to manage complex scheduling ecosystems. A major highlight was <code>add_pbac_tables</code> (Policy-Based Access Control), providing administrators with granular control over permissions for every action within the platform. The introduction of <code>cal_ai_self_serve</code> and <code>cal_ai_voice_agents</code> further expanded AI capabilities, automating more aspects of the scheduling process. Performance was optimized with <code>create_denormalized_tables_for_routing_form_response</code> for faster reporting, while <code>add_host_groups</code> allowed for more flexible host management.</p>
+<pre class="mermaid">flowchart LR
+  A["Simple permissions"] --> B["Policy-based access control"]
+  B --> C["AI-powered scheduling"]
+  C --> D["Self-serve AI agents"]
+</pre>
+</div></div>
+      </li>
+    </ul>
+    <footer>Read from packages/prisma/schema.prisma &middot; 20 core tables &middot; 595 migrations.</footer>
+  </main>
+</body>
+</html>

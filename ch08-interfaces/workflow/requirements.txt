@@ -1,0 +1,5 @@
+# Install shared deps first:
+#     pip install -r ../../utils/requirements.txt
+# (provides pocketflow, pyyaml, markdown-it-py, and your LLM provider SDK.)
+#
+# This chapter reads route/handler files directly off disk — no extra deps.

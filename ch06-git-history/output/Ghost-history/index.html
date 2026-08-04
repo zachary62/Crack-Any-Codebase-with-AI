@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghost: git history</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  // Disable auto-run SYNCHRONOUSLY, before DOMContentLoaded — otherwise Mermaid
+  // renders every diagram itself, and our loop below would re-process the
+  // already-rendered SVG and wipe it.
+  if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+</script>
+<script>
+  window.addEventListener('load', async function () {
+    // Syntax-highlight code blocks. (Mermaid pres have no <code>, so they're skipped.)
+    if (window.hljs) { try { hljs.highlightAll(); } catch (e) {} }
+    // Render each diagram, but validate first with parse() so a diagram the model
+    // got wrong is silently DROPPED — no "Syntax error" box, no orphan graphics.
+    // A data-driven page can't guarantee valid Mermaid; a missing diagram beats
+    // an error box.
+    if (!window.mermaid) return;
+    var blocks = document.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < blocks.length; i++) {
+      var el = blocks[i], src = el.textContent;
+      try {
+        if ((await mermaid.parse(src, { suppressErrors: true })) === false) { el.remove(); continue; }
+        var out = await mermaid.render('mmd' + i, src);
+        el.innerHTML = out.svg;
+      } catch (e) {
+        el.remove();
+      }
+    }
+  });
+</script>
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #fff; --text: #101828; --muted: #667085;
+    --faint: #98a2b3; --rule: #e4e7ec; --line: #eef0f3;
+    --accent: #3b82f6; --accent-soft: #eff6ff;
+    --good: #16a34a; --stone: #9aa4b2; --stone-bg: #f2f4f7;
+    --shadow: 0 1px 2px rgba(16,24,40,.05); --shadow-lg: 0 8px 26px rgba(16,24,40,.10);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 13.5px; line-height: 1.5; background: var(--bg); color: var(--text);
+    margin: 0; -webkit-font-smoothing: antialiased; }
+  code, .mono { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; }
+  main { max-width: 1240px; margin: 0 auto; padding: 0 24px 56px; }
+
+  /* Hero */
+  .hero { background: radial-gradient(120% 140% at 50% 0%, #1d2939 0%, #0c111d 70%);
+    color: #fff; padding: 46px 20px 42px; text-align: center; }
+  .hero-inner { max-width: 1120px; margin: 0 auto; }
+  .hero-diagram { margin: 26px 0 4px; }
+  .hero-diagram-cap { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); margin: 0 2px 9px; }
+  .timeline { display: flex; gap: 4px; align-items: stretch; }
+  .tl-era { min-width: 0; padding: 15px 13px; border-radius: 8px; color: #fff; overflow: hidden; }
+  .tl-name { font-weight: 800; font-size: .92rem; letter-spacing: -.01em; line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-meta { font-size: .66rem; opacity: .9; margin-top: 4px; font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 640px) { .timeline { flex-direction: column; } }
+  .eyebrow { display: inline-flex; align-items: center; gap: 7px; color: #93c5fd;
+    font-size: .68rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+  .eyebrow::before { content: ''; width: 16px; height: 2px; background: var(--accent); border-radius: 2px; }
+  .hero h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -.025em; margin: 12px 0 10px; }
+  .hero .sub { font-size: .94rem; color: #cbd5e1; margin: 0 auto; line-height: 1.55; }
+
+  /* Section header with a scroll hint */
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin: 42px 2px 14px; }
+  .sec-n { font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 700;
+    color: var(--accent); }
+  .sec-label { display: flex; align-items: center; gap: 9px; font-size: .68rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .sec-label::before { content: ''; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+  .sec-note { font-size: .8rem; color: var(--faint); }
+  .scroll-hint { margin-left: auto; font-size: .68rem; font-weight: 600; color: var(--faint); letter-spacing: .04em; }
+
+  /* Friendly "start here" welcome + per-section intros */
+  .intro { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 24px; margin: 30px 0 4px; }
+  .intro-label { font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px; }
+  .intro p { margin: .5em 0; font-size: .96rem; color: #344054; line-height: 1.7; }
+  .intro p:first-child { margin-top: 0; }
+  .intro strong { color: var(--text); }
+  .sec-intro { font-size: .9rem; color: #475467; line-height: 1.6; margin: -6px 2px 12px; }
+  .sec-intro p { margin: 0; }
+
+  /* Horizontal rails */
+  .rail { display: flex; gap: 16px; align-items: stretch; overflow-x: auto;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+    padding: 4px 2px 18px; margin: 0; list-style: none; }
+  .rail::-webkit-scrollbar { height: 9px; }
+  .rail::-webkit-scrollbar-track { background: var(--line); border-radius: 5px; }
+  .rail::-webkit-scrollbar-thumb { background: #cbd2dc; border-radius: 5px; }
+  .rail::-webkit-scrollbar-thumb:hover { background: var(--stone); }
+
+  /* Cards scroll up/down inside a fixed frame */
+  .scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+  .scroll::-webkit-scrollbar { width: 9px; }
+  .scroll::-webkit-scrollbar-track { background: transparent; }
+  .scroll::-webkit-scrollbar-thumb { background: #dce0e7; border-radius: 5px; }
+  .scroll::-webkit-scrollbar-thumb:hover { background: var(--stone); }
+
+  /* Shared card frame */
+  .card { scroll-snap-align: start; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    display: flex; flex-direction: column; overflow: hidden; }
+  .card-top { flex-shrink: 0; padding: 15px 20px 13px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #fbfcfe, #fff); }
+  .card-num { font-family: 'JetBrains Mono', monospace; font-size: .64rem; font-weight: 700;
+    letter-spacing: .12em; color: var(--accent); }
+  .card-name { font-size: 1.12rem; font-weight: 800; letter-spacing: -.01em; margin: 3px 0 7px; }
+  .card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip { font-family: 'JetBrains Mono', monospace; font-size: .66rem; color: var(--muted);
+    background: var(--stone-bg); padding: 2px 7px; border-radius: 5px; }
+
+  /* Section 1 — eras (natural height; only scrolls if a description is huge) */
+  .era { flex: 0 0 500px; width: 500px; }
+  .era .scroll { max-height: 72vh; }
+  .era-body { padding: 15px 20px 18px; }
+  .era-desc { color: #344054; font-size: .85rem; line-height: 1.6; }
+  .era-desc p { margin: 0 0 .55em; }
+  .turning { font-size: .8rem; color: var(--muted); background: var(--accent-soft);
+    border-radius: 8px; padding: 10px 12px; margin: 10px 0 0; }
+  .turning b { color: #1e3a8a; }
+  .turning .hash { font-family: 'JetBrains Mono', monospace; font-size: .72rem;
+    background: #dbeafe; padding: 1px 5px; border-radius: 4px; color: #1e40af; }
+
+  /* Section 2 — cast & mood (fixed frame, inner scroll) */
+  .profile { flex: 0 0 440px; width: 440px; height: 66vh; min-height: 460px; max-height: 720px;
+    border-top: 3px solid var(--accent); }
+  .cm { padding: 6px 20px 16px; }
+  .cm:first-child { padding-top: 14px; }
+  .cm h4 { font-size: .62rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--faint); margin: 14px 0 9px; }
+  .cm:first-child h4 { margin-top: 0; }
+  .cm h4 span { font-weight: 500; letter-spacing: 0; text-transform: none; font-size: .68rem; }
+  .bar { margin: 8px 0; }
+  .bar-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .bar-top .lab { font-size: .82rem; font-weight: 600; color: var(--text); }
+  .bar-top .val { font-family: 'JetBrains Mono', monospace; font-size: .68rem; color: var(--faint); }
+  .bar-track { height: 5px; background: var(--stone-bg); border-radius: 3px; margin: 4px 0 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .cast .bar-fill { background: linear-gradient(90deg, #60a5fa, #3b82f6); }
+  .mood .bar-fill { background: linear-gradient(90deg, #4ade80, #16a34a); }
+  .bar-note { font-size: .76rem; color: var(--muted); line-height: 1.5; }
+  .cm-narr { font-size: .78rem; color: var(--faint); font-style: italic; line-height: 1.55;
+    margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--line); }
+
+  /* Section 3 — graveyard (fixed frame, inner scroll) */
+  .grave { flex: 0 0 400px; width: 400px; height: 66vh; min-height: 460px; max-height: 720px;
+    border-top: 3px solid var(--stone); border-radius: 5px 5px var(--radius) var(--radius); }
+  .grave-meta { flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: .66rem;
+    color: var(--faint); padding: 14px 18px 11px; border-bottom: 1px solid var(--line); }
+  .grave-body { padding: 13px 18px 16px; font-size: .82rem; }
+  .grave-body p { margin: .55em 0; color: #344054; line-height: 1.6; }
+  .grave-body p:first-child { margin-top: 0; }
+  .grave-body strong { color: var(--text); }
+  .grave-body em { color: var(--muted); font-style: italic; }
+
+  /* Code + Mermaid inside cards */
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 11px 13px;
+    overflow-x: auto; margin: 11px 0; }
+  pre code { padding: 0; font-size: .74rem; line-height: 1.55; }
+  /* let highlight.js color the tokens, but keep our own dark pre background */
+  pre code.hljs { background: transparent; padding: 0; color: #e2e8f0; }
+  pre.mermaid { background: var(--stone-bg); color: inherit; text-align: center; padding: 12px; }
+  pre.mermaid svg { max-width: 100%; height: auto; }
+  code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .84em;
+    background: var(--stone-bg); color: var(--text); padding: 1px 5px; border-radius: 4px; }
+
+  footer { color: var(--faint); font-size: .74rem; text-align: center; margin-top: 44px;
+    padding-top: 18px; border-top: 1px solid var(--rule); }
+  @media (max-width: 560px) {
+    .era, .profile, .grave { flex-basis: 86vw; width: 86vw; }
+  }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">Git History</span>
+      <h1>Ghost</h1>
+      <p class="sub">Ghost is an open-source publishing platform, and this 51,747-commit codebase reveals its architectural evolution from a focused content management system to an extensible, modular platform supporting audience engagement and monetization. The git history surfaces key shifts in the data models, API contracts, and core service integrations that underpin its strategic growth.</p>
+    </div>
+  </header>
+  <main>
+    <section class="hero-diagram">
+      <div class="hero-diagram-cap">The product's life &mdash; 4 eras, sized by commit volume</div>
+      <div class="timeline"><div class="tl-era" style="flex:13410;background:#3b82f6"><div class="tl-name">The Core Publisher</div><div class="tl-meta">2013-05 &rarr; 2018-11 &middot; 13,410 commits</div></div><div class="tl-era" style="flex:19378;background:#8b5cf6"><div class="tl-name">Unlocking Audience &amp; Monetization</div><div class="tl-meta">2018-12 &rarr; 2022-08 &middot; 19,378 commits</div></div><div class="tl-era" style="flex:11648;background:#ec4899"><div class="tl-name">The Modular Platform &amp; Next-Gen Editor</div><div class="tl-meta">2022-09 &rarr; 2024-11 &middot; 11,648 commits</div></div><div class="tl-era" style="flex:7311;background:#f59e0b"><div class="tl-name">Extending the Network &amp; Modular Apps</div><div class="tl-meta">2024-12 &rarr; 2026-07 &middot; 7,311 commits</div></div></div>
+    </section>
+    <div class="sec-head">
+      <span class="sec-n">01</span>
+      <div class="sec-label">The eras</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section delineates Ghost's 4 distinct product eras: The Core Publisher, Unlocking Audience &amp; Monetization, The Modular Platform &amp; Next-Gen Editor, and Extending the Network &amp; Modular Apps. It illustrates how the system's focus progressively expanded from content creation to broader platform capabilities and third-party integrations, often involving significant data schema migrations and API surface area changes.</p>
+</div>
+    <ul class="rail eras">
+      <li class="card era">
+        <div class="card-top">
+          <div class="card-num">ERA 1</div>
+          <div class="card-name">The Core Publisher</div>
+          <div class="card-meta"><span class="chip">2013-05 &rarr; 2018-11</span><span class="chip">13,410 commits</span></div>
+        </div>
+        <div class="scroll">
+          <div class="era-body">
+            <div class="era-desc"><p>Welcome to the very beginning of Ghost, back when the project was taking its first steps to be the best open-source blogging platform. Picture a small startup, super focused on just one thing: making writing and publishing content frictionless. We see the birth of our foundational directories like <code>core/</code> (the heart of the application), <code>core/server/</code> (our backend engine), <code>ghost/admin/</code> (where you'd manage your site), and <code>core/frontend/</code> (what your visitors saw). There was an early <code>core/client/</code> for the admin that got replaced by an 'Ember admin' by 2014, showing a quick iteration to get the UI right. We even tried an off-the-shelf editor, <code>koenig/kg-simplemde/</code>, but quickly pivoted to developing our own, laying the groundwork for what would become our renowned editor experience. This era was all about building a solid, fast, and elegant platform for writers.</p>
+</div>
+            <pre class="mermaid">flowchart LR
+  A["Basic Blog"] --> B["Streamlined UI"]
+  B --> C["Own Editor"]</pre>
+            <div class="turning"><b>Turning point:</b> The team realized that simply providing a great writing experience wasn't enough. Publishers needed to connect directly with their audience, collect emails, and even charge for content. This shift in focus set the stage for building audience management features.</div>
+          </div>
+        </div>
+      </li>
+      <li class="card era">
+        <div class="card-top">
+          <div class="card-num">ERA 2</div>
+          <div class="card-name">Unlocking Audience &amp; Monetization</div>
+          <div class="card-meta"><span class="chip">2018-12 &rarr; 2022-08</span><span class="chip">19,378 commits</span></div>
+        </div>
+        <div class="scroll">
+          <div class="era-body">
+            <div class="era-desc"><p>Building on the solid publishing core, this era was all about empowering creators to build sustainable businesses around their content. We started adding crucial functionality to manage your audience directly within Ghost. The <code>ghost/members-api/</code> directory came to life, allowing publishers to handle member sign-ups and subscriptions. We introduced <code>ghost/portal/</code>, a user-facing component that lets your audience sign up and manage their membership. To support this growth and future features, we also saw the introduction of <code>canary</code> API endpoints (like a beta track for our API), allowing us to test new features more rapidly. Our CI/CD (<code>.github/workflows/</code>) setup was born, professionalizing our development process. However, all this rapid expansion and API versioning (v1, v2, v3) eventually led to a complex <code>core/server/</code> architecture that needed a fresh approach.</p>
+</div>
+            <pre class="mermaid">flowchart LR
+  P["Publish Content"] --> M["Manage Members"]
+  M --> S["Sell Subscriptions"]
+  S --> A["Complex APIs"]</pre>
+            <div class="turning"><b>Turning point:</b> The existing monolithic <code>core/server/</code> (one big piece of server-side code) and its multiple, versioned APIs had become a significant hurdle for rapid development and future innovation. The team made the bold decision to fundamentally overhaul the backend architecture, paving the way for a more modular and scalable system. <span class="hash">a4a9ba7940</span></div>
+          </div>
+        </div>
+      </li>
+      <li class="card era">
+        <div class="card-top">
+          <div class="card-num">ERA 3</div>
+          <div class="card-name">The Modular Platform &amp; Next-Gen Editor</div>
+          <div class="card-meta"><span class="chip">2022-09 &rarr; 2024-11</span><span class="chip">11,648 commits</span></div>
+        </div>
+        <div class="scroll">
+          <div class="era-body">
+            <div class="era-desc"><p>With the decision to modernize our backend made, this era kicked off with a massive re-architecture. The old <code>core/server/</code>, <code>core/frontend/</code>, and other <code>core/</code> directories went silent, replaced by the nimble <code>ghost/core/</code> package. The jewel of this era was the complete rewrite of our editor: we ditched <code>koenig-react</code> and launched <code>koenig/koenig-lexical/</code>, a cutting-edge rich-text editor that forms the backbone of your writing experience today. The entire admin interface also underwent a significant modularization, with old 'Ember settings pages' being 'Deleted' (<code>e8e0d84d50</code>) and new 'app'-like components such as <code>apps/admin-x-settings/</code> appearing. We also saw new features like <code>apps/comments-ui/</code> for direct audience engagement, signaling our continued commitment to building community tools. This was all about making Ghost more flexible, maintainable, and ready for whatever came next.</p>
+</div>
+            <pre class="mermaid">flowchart LR
+  O["Old Platform"] --> M["Modular Core"]
+  M --> E["New Editor"]
+  E --> A["Modular Admin"]</pre>
+            <div class="turning"><b>Turning point:</b> With the core platform rebuilt, the admin interface modularized, and the editor perfected, the team was ready to push Ghost beyond a standalone publishing tool and explore its role in the broader, connected web. <span class="hash">e8e0d84d50</span></div>
+          </div>
+        </div>
+      </li>
+      <li class="card era">
+        <div class="card-top">
+          <div class="card-num">ERA 4</div>
+          <div class="card-name">Extending the Network &amp; Modular Apps</div>
+          <div class="card-meta"><span class="chip">2024-12 &rarr; 2026-07</span><span class="chip">7,311 commits</span></div>
+        </div>
+        <div class="scroll">
+          <div class="era-body">
+            <div class="era-desc"><p>You're joining us right in the thick of this exciting era! Having modernized the core and editor, the team is now exploring how Ghost can connect to the wider internet and offer even more sophisticated features. We saw the experimental <code>apps/admin-x-activitypub/</code> emerge, a fascinating exploration into the federated social web (think Mastodon integration!). While that specific app might have evolved, it shows our intent to connect. We're continuing to modularize the admin experience with new 'app' packages like <code>apps/shade/</code> and <code>apps/posts/</code>, making the platform even more flexible and adaptable. Legacy components are still being 'Removed', like the <code>legacy Ember members list</code> (<code>1dd3f89137</code>), as we refine the entire system. This era is about pushing the boundaries of what a publishing platform can be, connecting content creators to networks and communities in innovative ways.</p>
+</div>
+            <pre class="mermaid">flowchart LR
+  P["Publish Site"] --> C["Community Features"]
+  C --> F["Federated Web"]
+  F --> E["Expanded Ecosystem"]</pre>
+            <div class="turning"><b>Turning point:</b> This era is still very much active and evolving, with new ideas and applications continually being explored and integrated. There's no fixed 'end' yet, only ongoing innovation!</div>
+          </div>
+        </div>
+      </li>
+    </ul>
+
+    <div class="sec-head">
+      <span class="sec-n">02</span>
+      <div class="sec-label">Cast &amp; mood</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This part identifies the primary contributors during each era and characterizes their day-to-day work, reflecting how team composition and development priorities influenced code structure, commit patterns, and the introduction of new architectural patterns versus refactoring existing components.</p>
+</div>
+    <ul class="rail profiles">
+      <li class="card profile">
+        <div class="card-top">
+          <div class="card-num">ERA 1</div>
+          <div class="card-name">The Core Publisher</div>
+          <div class="card-meta"><span class="chip">2013-05 &rarr; 2018-11</span><span class="chip">13,410 commits</span></div>
+        </div>
+        <div class="scroll">
+          <div class="cm cast">
+            <h4>Cast <span>&middot; who drove it</span></h4>
+          <div class="bar"><div class="bar-top"><span class="lab">Hannah Wolfe</span><span class="val">19%</span></div><div class="bar-track"><div class="bar-fill" style="width:19%"></div></div><div class="bar-note">A core developer and technical lead, Hannah guided the project through its initial build and continuous refinement across all areas.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Kevin Ansfield</span><span class="val">8%</span></div><div class="bar-track"><div class="bar-fill" style="width:8%"></div></div><div class="bar-note">A key contributor to the Ghost admin's evolving user interface, focusing on components, modals, and editor enhancements in the later half of the era.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">John O&#x27;Nolan</span><span class="val">6%</span></div><div class="bar-track"><div class="bar-fill" style="width:6%"></div></div><div class="bar-note">A co-founder, John shaped the early product vision and contributed significantly to the initial administrative interface and overall project direction.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Sebastian Gierlinger</span><span class="val">5%</span></div><div class="bar-track"><div class="bar-fill" style="width:5%"></div></div><div class="bar-note">A consistent backend contributor, Sebastian focused on server-side logic, security, and API improvements throughout the era.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">kirrg001</span><span class="val">4%</span></div><div class="bar-track"><div class="bar-fill" style="width:4%"></div></div><div class="bar-note">Becoming a prominent figure later in the era, kirrg001 focused on broader core updates, migrations, and system-level enhancements.</div></div>
+<div class="cm-narr">This era was heavily steered by co-founder John O'Nolan and lead developer Hannah Wolfe, who laid the foundation; a growing group of contributors then helped expand and refine the platform.</div>
+          </div>
+          <div class="cm mood">
+            <h4>Mood <span>&middot; what the work was</span></h4>
+          <div class="bar"><div class="bar-top"><span class="lab">Admin UI &amp; Editor Experience</span><span class="val">50%</span></div><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><div class="bar-note">Developing and iterating on the core administrative interface, including user management, settings, and the increasingly sophisticated content editor.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Core Application Logic</span><span class="val">25%</span></div><div class="bar-track"><div class="bar-fill" style="width:25%"></div></div><div class="bar-note">Building out the backend engine, API functionalities, and foundational server-side features like security, data handling, and theme support.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Developer Tooling &amp; Infrastructure</span><span class="val">25%</span></div><div class="bar-track"><div class="bar-fill" style="width:25%"></div></div><div class="bar-note">Maintaining and evolving the project's build processes, code quality, dependencies, and underlying technical setup.</div></div>
+<div class="cm-narr">The primary focus was on delivering a polished writing and publishing experience through extensive admin UI work, supported by a solid core backend and continuous investment in developer tooling.</div>
+          </div>
+        </div>
+      </li>
+      <li class="card profile">
+        <div class="card-top">
+          <div class="card-num">ERA 2</div>
+          <div class="card-name">Unlocking Audience &amp; Monetization</div>
+          <div class="card-meta"><span class="chip">2018-12 &rarr; 2022-08</span><span class="chip">19,378 commits</span></div>
+        </div>
+        <div class="scroll">
+          <div class="cm cast">
+            <h4>Cast <span>&middot; who drove it</span></h4>
+          <div class="bar"><div class="bar-top"><span class="lab">Renovate Bot</span><span class="val">16%</span></div><div class="bar-track"><div class="bar-fill" style="width:16%"></div></div><div class="bar-note">An automated bot ensuring dependencies remained updated and secure across the entire codebase.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Kevin Ansfield</span><span class="val">9%</span></div><div class="bar-track"><div class="bar-fill" style="width:9%"></div></div><div class="bar-note">A primary owner of the admin interface and Koenig editor, focusing on UI features, bug fixes, and the publisher's experience.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Fabien O&#x27;Carroll</span><span class="val">9%</span></div><div class="bar-track"><div class="bar-fill" style="width:9%"></div></div><div class="bar-note">Heavily involved in the backend architecture for members and subscriptions, including API development and integrations.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Naz</span><span class="val">7%</span></div><div class="bar-track"><div class="bar-fill" style="width:7%"></div></div><div class="bar-note">A key backend developer, contributing significantly to core server logic, API refactoring, and initial member import functionality.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Daniel Lockyer</span><span class="val">7%</span></div><div class="bar-track"><div class="bar-fill" style="width:7%"></div></div><div class="bar-note">Orchestrated CI/CD improvements, managed releases, and oversaw the structural organization of various Ghost packages.</div></div>
+<div class="cm-narr">This era saw a significant growth in the core team, moving from its founder-led origins to a distributed group of specialized contributors, reflecting the increasing complexity of a monetization-focused product.</div>
+          </div>
+          <div class="cm mood">
+            <h4>Mood <span>&middot; what the work was</span></h4>
+          <div class="bar"><div class="bar-top"><span class="lab">Developer Tooling &amp; CI/CD</span><span class="val">26%</span></div><div class="bar-track"><div class="bar-fill" style="width:26%"></div></div><div class="bar-note">A major investment in automating dependency updates, professionalizing development with GitHub Actions, and robust testing frameworks.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Publisher Admin &amp; Editor Experience</span><span class="val">24%</span></div><div class="bar-track"><div class="bar-fill" style="width:24%"></div></div><div class="bar-note">Continuous enhancements to the Ghost admin panel and the Koenig editor, improving the daily workflow for content creators.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Core Platform &amp; API Infrastructure</span><span class="val">21%</span></div><div class="bar-track"><div class="bar-fill" style="width:21%"></div></div><div class="bar-note">Ongoing work to support the expanding API versions, database migrations, and maintain the underlying stability of the Ghost platform.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Audience &amp; Monetization Features</span><span class="val">20%</span></div><div class="bar-track"><div class="bar-fill" style="width:20%"></div></div><div class="bar-note">Dedicated effort to build out member sign-ups, subscription management, and the user-facing Portal for creators.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">New Audience Engagement Tools</span><span class="val">3%</span></div><div class="bar-track"><div class="bar-fill" style="width:3%"></div></div><div class="bar-note">Early exploration and development of interactive features like commenting and improved search for the audience.</div></div>
+<div class="cm-narr">The work was heavily skewed towards building robust member and monetization features, backed by a significant investment in development infrastructure, while still refining the core publishing and admin experience.</div>
+          </div>
+        </div>
+      </li>
+      <li class="card profile">
+        <div class="card-top">
+          <div class="card-num">ERA 3</div>
+          <div class="card-name">The Modular Platform &amp; Next-Gen Editor</div>
+          <div class="card-meta"><span class="chip">2022-09 &rarr; 2024-11</span><span class="chip">11,648 commits</span></div>
+        </div>
+        <div class="scroll">
+          <div class="cm cast">
+            <h4>Cast <span>&middot; who drove it</span></h4>
+          <div class="bar"><div class="bar-top"><span class="lab">Kevin Ansfield</span><span class="val">19%</span></div><div class="bar-track"><div class="bar-fill" style="width:19%"></div></div><div class="bar-note">A primary engineer for the cutting-edge Lexical editor, driving its integration and new card features.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Daniel Lockyer</span><span class="val">13%</span></div><div class="bar-track"><div class="bar-fill" style="width:13%"></div></div><div class="bar-note">A core architect, shepherding the backend modernization and the shift to modular 'apps' in Ghost.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Simon Backx</span><span class="val">12%</span></div><div class="bar-track"><div class="bar-fill" style="width:12%"></div></div><div class="bar-note">Focused on the new AdminX settings interface, ensuring smooth functionality for various admin features.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Djordje Vlaisavljevic</span><span class="val">11%</span></div><div class="bar-track"><div class="bar-fill" style="width:11%"></div></div><div class="bar-note">Instrumental in shaping the user experience and visual design of the modular admin settings and new apps.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Ronald Langeveld</span><span class="val">9%</span></div><div class="bar-track"><div class="bar-fill" style="width:9%"></div></div><div class="bar-note">Heavily involved in building new content cards for the Lexical editor, including Unsplash and Header Cards.</div></div>
+<div class="cm-narr">This era saw a strong core team of specialized contributors emerge, each owning major parts of the modular rewrite, moving beyond the founder-led origins.</div>
+          </div>
+          <div class="cm mood">
+            <h4>Mood <span>&middot; what the work was</span></h4>
+          <div class="bar"><div class="bar-top"><span class="lab">Modular Admin &amp; Apps</span><span class="val">29%</span></div><div class="bar-track"><div class="bar-fill" style="width:29%"></div></div><div class="bar-note">Rebuilt the admin interface into a modular system with dedicated 'apps' for settings, comments, and other features.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Lexical Editor &amp; Content Cards</span><span class="val">28%</span></div><div class="bar-track"><div class="bar-fill" style="width:28%"></div></div><div class="bar-note">Ditched the old editor for a Lexical-based rewrite, focusing on rich-text capabilities and new content cards.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Core Platform &amp; Backend</span><span class="val">17%</span></div><div class="bar-track"><div class="bar-fill" style="width:17%"></div></div><div class="bar-note">Modernized the backend architecture, including core services, collections, and overall Ghost platform enhancements.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Dependency &amp; Tooling Updates</span><span class="val">16%</span></div><div class="bar-track"><div class="bar-fill" style="width:16%"></div></div><div class="bar-note">Kept the platform current by regularly updating dependencies, improving CI, and maintaining development tools.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Audience &amp; Monetization Features</span><span class="val">8%</span></div><div class="bar-track"><div class="bar-fill" style="width:8%"></div></div><div class="bar-note">Continued to enhance membership features, portal functionality, and audience engagement tools like mentions and recommendations.</div></div>
+<div class="cm-narr">The primary focus was on a complete re-platforming, delivering a modern editor and modular admin, supported by significant core backend and tooling updates.</div>
+          </div>
+        </div>
+      </li>
+      <li class="card profile">
+        <div class="card-top">
+          <div class="card-num">ERA 4</div>
+          <div class="card-name">Extending the Network &amp; Modular Apps</div>
+          <div class="card-meta"><span class="chip">2024-12 &rarr; 2026-07</span><span class="chip">7,311 commits</span></div>
+        </div>
+        <div class="scroll">
+          <div class="cm cast">
+            <h4>Cast <span>&middot; who drove it</span></h4>
+          <div class="bar"><div class="bar-top"><span class="lab">Steve Larson</span><span class="val">11%</span></div><div class="bar-track"><div class="bar-fill" style="width:11%"></div></div><div class="bar-note">A key architect of the platform's data and analytics, he also maintained core services and ensured testing infrastructure was solid.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Kevin Ansfield</span><span class="val">7%</span></div><div class="bar-track"><div class="bar-fill" style="width:7%"></div></div><div class="bar-note">Deeply involved in evolving the Koenig editor and the admin UI, ensuring a polished experience across various member-facing flows.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Sodbileg Gansukh</span><span class="val">5%</span></div><div class="bar-track"><div class="bar-fill" style="width:5%"></div></div><div class="bar-note">A primary driver for the ActivityPub integration, shaping its design and user experience within the new modular admin apps.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Peter Zimon</span><span class="val">5%</span></div><div class="bar-track"><div class="bar-fill" style="width:5%"></div></div><div class="bar-note">Focused on UI/UX consistency across the new modular apps like Shade and ActivityPub, and enhancing the analytics dashboards.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Chris Raible</span><span class="val">5%</span></div><div class="bar-track"><div class="bar-fill" style="width:5%"></div></div><div class="bar-note">Contributed significantly to Portal and the backend analytics infrastructure, alongside crucial CI/CD and build process improvements.</div></div>
+<div class="cm-narr">This era saw a dedicated core team, with Steve Larson leading on data and infrastructure, while a distributed group of specialists built new modular apps and features; meanwhile, a busy bot diligently kept all dependencies up-to-date, making it the top contributor by commit count.</div>
+          </div>
+          <div class="cm mood">
+            <h4>Mood <span>&middot; what the work was</span></h4>
+          <div class="bar"><div class="bar-top"><span class="lab">Platform Infrastructure &amp; Tooling</span><span class="val">47%</span></div><div class="bar-track"><div class="bar-fill" style="width:47%"></div></div><div class="bar-note">This includes major dependency updates, CI/CD (continuous integration/continuous deployment) pipeline enhancements, core refactoring (like removing legacy testing frameworks), and modernizing build processes.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Audience &amp; Monetization Features</span><span class="val">22%</span></div><div class="bar-track"><div class="bar-fill" style="width:22%"></div></div><div class="bar-note">Developing new analytics dashboards, member management capabilities, advanced email flows, and monetization features like offers and integrations (e.g., Transistor.fm for podcasts).</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Modular Admin Apps &amp; UI/UX</span><span class="val">19%</span></div><div class="bar-track"><div class="bar-fill" style="width:19%"></div></div><div class="bar-note">Building out new administrative applications such as ActivityPub (for federated social web integration), Shade (a design system), and Posts, focusing on a more flexible and adaptable user interface.</div></div>
+          <div class="bar"><div class="bar-top"><span class="lab">Editor &amp; Content Refinement</span><span class="val">12%</span></div><div class="bar-track"><div class="bar-fill" style="width:12%"></div></div><div class="bar-note">Enhancing the core Koenig editor experience, expanding internationalization support for more languages, and addressing general bug fixes and minor UI improvements.</div></div>
+<div class="cm-narr">Work focused heavily on foundational platform modernization and expanding new modular applications, while simultaneously enhancing core audience engagement and content creation tools.</div>
+          </div>
+        </div>
+      </li>
+    </ul>
+
+    <div class="sec-head">
+      <span class="sec-n">03</span>
+      <div class="sec-label">The graveyard</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>The graveyard uncovers 6 features that were built and later sunsetted, providing insight into product pivots, the costs associated with maintaining unused code paths, and how strategic decisions led to the removal of entire code modules and database tables.</p>
+</div>
+    <ul class="rail graves">
+      <li class="card grave">
+        <div class="grave-meta">&#9738; 2016-05-18 &middot; 1b85d67 &middot; 514 files &middot; core/client/ &middot; The Core Publisher</div>
+        <div class="scroll"><div class="grave-body"><p><strong>What it was: a dedicated admin client.</strong> This was a complete Ember.js application responsible for Ghost's entire administration dashboard, including content creation and editing, user management, site settings, and file uploads, all running in the browser.</p>
+<p><strong>What they believed: publishers wanted a desktop-like experience.</strong> The team believed that a rich, standalone client-side application would offer the fastest, most interactive, and &quot;frictionless&quot; experience for managing a Ghost blog, allowing complex UI interactions without full page reloads.</p>
+<p><strong>Why it died: the admin became one with the platform.</strong> Rather than being killed, this separate admin application was integrated into the main Ghost codebase, eliminating the overhead of maintaining distinct frontend and backend repositories and build processes for the admin.</p>
+<p><strong>What it signals: architectural simplification for faster iteration.</strong> Consolidating the admin code into a unified Ghost application indicated a strategic shift towards a more streamlined development workflow, reducing complexity and focusing on a single, coherent platform to accelerate future feature development.</p>
+<pre class="mermaid">flowchart LR
+    A["Separate Ember Admin Client"] --> B["Unified Ghost Application"]
+</pre>
+<p><em>Name:</em> The Split Admin Ember App. <em>Tagline:</em> When the dashboard decided to move back home. <em>Epitaph:</em> Its dedicated client served well, until Ghost decided unity made it stronger.</p>
+</div></div>
+      </li>
+      <li class="card grave">
+        <div class="grave-meta">&#9738; 2023-11-06 &middot; e8e0d84 &middot; 303 files &middot; ghost/admin/ &middot; The Modular Platform &amp; Next-Gen Editor</div>
+        <div class="scroll"><div class="grave-body"><p><strong>WHAT IT WAS: The Ember-powered Admin Settings.</strong> These files formed the user interface (UI) for nearly all of Ghost's administrative settings — from managing your theme and newsletters to configuring membership and staff accounts. They were built using the Ember.js framework, which is a way of structuring web applications, and they were the backbone of how creators customized their sites for years.</p>
+<p><strong>WHAT THEY BELIEVED: Ember offered a stable foundation for Ghost's admin.</strong> The team initially chose Ember.js, betting its structured approach would deliver a comprehensive and stable platform. This allowed for rich, interactive settings that were tightly integrated, helping users manage their publication with ease.</p>
+<p><strong>WHY IT DIED: A necessary upgrade for a modular future.</strong> This entire codebase wasn't a feature that failed, but a foundational technology that reached its planned retirement. As Ghost moved towards a more flexible, &quot;modular&quot; architecture (the &quot;Modular Platform&quot; era), the tightly-knit Ember settings became hard to evolve quickly. They were replaced by a new, independent &quot;app&quot;-like component system, essentially rebuilding the same beloved features with a more modern and maintainable approach.</p>
+<p><strong>WHAT IT SIGNALS: A strategic leap towards a flexible, future-proof admin.</strong> This deletion signals a major commitment to behind-the-scenes architectural improvements. It shows Ghost's dedication to building a foundation that enables faster new feature development, makes it easier for new teammates to contribute, and ensures the product can scale without being held back by older tech. It's a shift from one big admin system to a collection of independent &quot;apps&quot; that work together.</p>
+<pre class="mermaid">flowchart LR
+    A["Old Ember Admin UI"] --> B["Monolithic Structure"]
+    B --> C["Maintenance Burden"]
+    A --> D["New Modular Admin"]
+    D --> E["Independent App Components"]
+    E --> F["Easier Development"]
+</pre>
+<p><em>Name:</em> The Ember Admin's Sunset. <em>Tagline:</em> When the whole admin system got a modern rebuild. <em>Epitaph:</em> A beloved foundation retired, paving the way for a more flexible and modular Ghost.</p>
+</div></div>
+      </li>
+      <li class="card grave">
+        <div class="grave-meta">&#9738; 2022-04-06 &middot; a4a9ba7 &middot; 218 files &middot; core/server/ &middot; Unlocking Audience &amp; Monetization</div>
+        <div class="scroll"><div class="grave-body"><p><strong>What it was: Parallel API paths for developers.</strong> This was a comprehensive system that offered external developers multiple, stable &quot;doors&quot; (<code>/api/v2/</code> and <code>/api/v3/</code>) to connect with Ghost's features, ensuring their integrations wouldn't break with every product update, by maintaining separate code for each version of content, member, and platform management.
+<strong>What they believed: Stable API meant more integrations.</strong> The team believed that by offering predictable and unchanging API versions, they would foster a robust ecosystem where developers could build reliable applications, ultimately empowering creators and boosting Ghost's audience and monetization capabilities.
+<strong>Why it died: Too much to maintain.</strong> The overhead of keeping two (and previously more) separate API versions in sync, debugging issues across them, and duplicating new features in each led to a significantly complex and slow-to-evolve server architecture, hindering the very innovation it sought to support.
+<strong>What it signals: Simplified, forward-looking API.</strong> This deletion signals a strategic shift from supporting multiple historical API versions to focusing on a single, continuously evolving API, prioritizing faster core product development and a more streamlined architecture over explicit, versioned backward compatibility.</p>
+<pre class="mermaid">flowchart LR
+    "Integrations" --> "API v2 Endpoints"
+    "Integrations" --> "API v3 Endpoints"
+    "API v2 Endpoints" --> "Ghost Core Logic"
+    "API v3 Endpoints" --> "Ghost Core Logic"
+</pre>
+<p><em>Name:</em> The Versioned API Fork. <em>Tagline:</em> When keeping old paths made all paths slow. <em>Epitaph:</em> A complex labyrinth of duplicate APIs, sacrificed for the sake of speed and simplicity.</p>
+</div></div>
+      </li>
+      <li class="card grave">
+        <div class="grave-meta">&#9738; 2025-06-27 &middot; c642fa1 &middot; 142 files &middot; ghost/core/ &middot; Extending the Network &amp; Modular Apps</div>
+        <div class="scroll"><div class="grave-body"><p><strong>What it was: a historical log of database changes.</strong> A massive collection of database instructions, called 'migrations', for every minor version of Ghost 4.x. These scripts were like a detailed historical log, guiding Ghost's database to evolve its structure and content for features like members, paid subscriptions, and offers, as users updated their software.</p>
+<p><strong>What they believed: a simpler upgrade path was necessary.</strong> The path to update from any Ghost 4.x version to the newest Ghost 6.x had become too complex to maintain. The team felt it was better to guide users through a simpler two-step update (first to the very latest 4.x or any 5.x, then to 6.x) rather than support a dizzying array of direct jumps from every old 4.x version.</p>
+<p><strong>Why it died: the maintenance burden was too high.</strong> The technical cost of ensuring compatibility for over a hundred different 4.x migrations when jumping to a new major version (6.x) became too high. To simplify, the team removed all these old migration scripts and instead added a special 'guard' migration. If someone tries to jump directly from an old 4.x version to 6.x, this guard now explicitly stops the process with a clear error message, pointing them to the correct, simpler upgrade path.</p>
+<pre><code class="language-javascript">// From ghost/core/core/server/data/migrations/versions/4.47/2022-05-03-15-30-final-v4.js
+module.exports = createIrreversibleMigration(async (knex) =&gt; {
+    // This is NOT the right way to get to 6.x
+    // It will delete everything and exit with a fatal error
+    await knex.raw('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+
+    throw new Error('Please update to the very latest 4.x first, then update to 5.0. Read more: https://ghost.org/docs/update-major-version/.');
+});
+</code></pre>
+<p><strong>What it signals: a focus on streamlined development and maintainability.</strong> This is a strategic decision to prioritize long-term maintainability and a streamlined developer experience over supporting every possible historical upgrade route. This cleanup allows the team to move faster on new features and reduce 'technical debt' related to old database schemas.</p>
+<p><em>Name:</em> The Upgrade Gatekeeper. <em>Tagline:</em> When simpler upgrades meant enforcing the path. <em>Epitaph:</em> We removed old detours, pointing all travelers to the clearer road ahead.</p>
+</div></div>
+      </li>
+      <li class="card grave">
+        <div class="grave-meta">&#9738; 2019-09-16 &middot; 55d9bb6 &middot; 89 files &middot; ghost/ &middot; Unlocking Audience &amp; Monetization</div>
+        <div class="scroll"><div class="grave-body"><p><strong>What it was: a self-contained membership platform.</strong> This was a complete, early system for managing user authentication and paid subscriptions directly within Ghost, including all the user-facing signup, sign-in, and password reset pages, a full Stripe checkout flow, its own API backend, and integration points for Ghost themes.</p>
+<p><strong>What they believed: creators needed an all-in-one monetization tool.</strong> The team bet that offering robust, built-in forms and payment processing would empower publishers to easily build sustainable businesses around their content, making audience and monetization a core part of Ghost itself.</p>
+<p><strong>Why it died: a better, more integrated solution emerged.</strong> While the idea of direct memberships remained crucial, this specific set of &quot;unused packages&quot; was replaced or absorbed by Ghost's newer <code>members-api</code> and <code>portal</code> architecture, which are explicitly mentioned as coming to life in the same period. This allowed for a more unified and refined approach to member management.</p>
+<p><strong>What it signals: a commitment to evolving core features.</strong> This deletion shows the product's iterative nature; even large, functional codebases are replaced when a more strategic or better-integrated path for delivering key user value becomes clear, prioritizing a cohesive platform experience.</p>
+<pre class="mermaid">flowchart LR
+    A["Auth Pages UI"] --> B["Browser Auth Logic"]
+    B --> C["Gateway API"]
+    C --> D["Gateway Protocol"]
+    E["Theme Bindings"] --> A
+</pre>
+<p><em>Name:</em> The Proto-Memberships. <em>Tagline:</em> When the membership dream found its permanent home. <em>Epitaph:</em> An early, comprehensive effort at empowering creators that cleared the path for Ghost's future of audience and monetization.</p>
+</div></div>
+      </li>
+      <li class="card grave">
+        <div class="grave-meta">&#9738; 2026-07-03 &middot; fc5f3c9 &middot; 82 files &middot; koenig/ &middot; Extending the Network &amp; Modular Apps</div>
+        <div class="scroll"><div class="grave-body"><p><strong>What it was: Ghost's Mobiledoc content format.</strong> It was the structured JSON format that Ghost's editor, Koenig, used internally to represent all rich text and embedded content (like images or custom cards). This deletion removed several core packages that handled everything from converting plain HTML <em>into</em> this Mobiledoc format, converting Mobiledoc back <em>into</em> HTML for display, and defining specific content blocks like default &quot;atoms&quot; and &quot;parser plugins&quot; for the editor.</p>
+<p><strong>What they believed: a standardized content blueprint was the way forward.</strong> The team believed that adopting a structured, portable content format like Mobiledoc would provide a stable and flexible foundation for the editor. This would make content creation and rendering consistent, enabling a &quot;modernized editor&quot; capable of sophisticated features.</p>
+<p><strong>Why it died: Ghost replaced its underlying editor architecture.</strong> The commit message states that Ghost no longer used &quot;mobiledoc-based editing internals.&quot; This means the team had already moved to a different, likely custom-built or more suitable, internal system for handling content. This bulk deletion was a cleanup, removing all the now-unused pieces of the old Mobiledoc system.</p>
+<p><strong>What it signals: a deepened commitment to custom core technology.</strong> By replacing Mobiledoc with an internal solution, Ghost demonstrated a clear preference for owning its fundamental content infrastructure. This move indicates a desire for more control and tailoring of the core editing experience to Ghost's specific needs, rather than relying on an external standard.</p>
+<p><em>Name:</em> The Mobiledoc Sunset. <em>Tagline:</em> When the editor evolved beyond an external standard. <em>Epitaph:</em> A faithful content blueprint, retired as Ghost built its own path forward.</p>
+</div></div>
+      </li>
+    </ul>
+
+    <footer>Reverse engineered from 51,747 commits of git history.</footer>
+  </main>
+</body>
+</html>

@@ -4,106 +4,111 @@ _A product story reverse engineered from the codebase._
 
 ## The pitch
 
-> It's a database for financial transactions that strictly enforces double-entry accounting with extreme speed and data integrity.
+> It's like a PostgreSQL database, but it's built specifically for financial transactions with native features like accounts and transfers that automatically handle debits and credits to ensure accuracy and high speed.
 
 ## The pain
 
-> A financial operations engineer, responsible for managing customer accounts, stares at a discrepancy report, terrified that another "ghost transaction" means millions are missing from their custom-built ledger. Her real competitor isn't another transaction system, it's the endless array of spreadsheets, manual reconciliation scripts, and sleepless nights spent debugging why balances don't add up.
+> Sarah, a backend engineer at an online marketplace, just got another urgent alert: hundreds of payment holds expired overnight but weren't automatically released, leaving customer funds stuck and manual fixes piling up. Her real competitor isn't another ledger; it's her team's intricate codebase with separate tables, cron jobs, and rollback scripts that constantly break.
 
 ## Where it sits
 
 ### What it gives up
 
-- General-purpose data model: It cannot store arbitrary JSON documents or complex relational schemas directly, focusing solely on financial primitives.
-- SQL compatibility: It doesn't offer a SQL interface, requiring integration via specific client libraries in various programming languages.
-- Rich query language: Current query capabilities are limited compared to the powerful SQL or flexible NoSQL query languages found in general-purpose databases.
-- Mature ecosystem: It lacks the vast tooling, extensions, and community support that established general-purpose databases have accumulated over decades.
-- Flexibility of generic building blocks: It cannot be easily adapted to non-financial domains without significant effort or without sacrificing its core strengths.
+- TigerBeetle does not offer a standard SQL interface, increasing the learning curve and integration effort for developers familiar with relational databases.
+- It currently lacks official managed cloud offerings, requiring users to handle their own infrastructure, deployment, and operational management.
+- Its highly specialized focus limits its applicability to financial transaction processing, making it unsuitable for general-purpose data storage.
+- As a newer technology, it has a less mature ecosystem, fewer pre-built tools, and a smaller community compared to established database solutions.
 
 ### What it gets in return
 
-- Built-in financial integrity: It guarantees double-entry accounting rules and ACID compliance natively, preventing ledger imbalances by design at the database level.
-- Extreme performance for financial workloads: It achieves very high transaction throughput and low latency specifically for financial transfers due to its purpose-built design in Zig.
-- Simplified financial application development: It reduces complexity for developers building financial systems by offloading critical, domain-specific ledger logic and guarantees to the database.
-- Reduced operational overhead for compliance: It provides an auditable, unforgeable ledger that simplifies compliance with financial regulations due to its inherent design.
-- Predictable distributed scaling: It scales horizontally with built-in consensus, simplifying distributed deployments for financial systems handling large transaction volumes.
+- It achieves unparalleled transactional performance and throughput for financial ledgers due to its purpose-built design and choice of low-level language (Zig).
+- It ensures strong financial correctness and data integrity directly at the database layer, significantly reducing application-side complexity and potential accounting errors.
+- Its simplified data model, focused exclusively on financial primitives, eliminates the overhead associated with general-purpose database features.
+- The immutable, double-entry ledger design provides inherent auditability for all transactions, simplifying compliance and reconciliation processes.
 
 ### Why incumbents can't copy this
 
-Traditional relational databases like PostgreSQL cannot integrate TigerBeetle's opinionated financial data model and bare-metal performance optimizations without fundamentally altering their generic SQL interface and broad applicability, which are their core business value. Similarly, distributed ACID systems like FoundationDB would lose their flexible, generic key-value semantics. High-performance NoSQL databases like ScyllaDB would need to sacrifice their eventual consistency model and rebuild their core engine to offer TigerBeetle's strict, transactional safety for financial primitives. A custom ledger solution, while achieving similar performance, would forever carry the burden of maintaining a bespoke, complex system, whereas TigerBeetle offers this as a robust, open-source product.
+Traditional RDBMS like PostgreSQL and distributed SQL databases like CockroachDB derive significant value from their broad applicability and standard SQL interfaces. To copy TigerBeetle's deep integration of financial primitives and low-level performance optimizations, they would need to fundamentally alter their core data models and query languages. This would break backward compatibility, alienate their vast existing user bases, and undermine the very "general purpose" appeal that defines their business. Their current architectures, optimized for flexibility and wide adoption, introduce overheads that prevent them from matching TigerBeetle's extreme specialization and raw performance for ledger operations without destroying their core value proposition.
+
+```mermaid
+flowchart LR
+  A["Incumbent: Standard SQL"] --> B["Broad Appeal & Ecosystem"]
+  B --> C["Cannot Specialize Deeply for Financial Primitives"]
+  D["TigerBeetle: Custom API"] --> E["Deep Financial Logic"]
+  E --> F["Extreme Performance & Safety"]
+```
 
 ### Side by side
 
 **Dimensions**
 
-- **Financial terms built-in**: The database understands concepts like 'account', 'debit', and 'credit' as core features, not just generic rows you label yourself.
-- **Money transaction safety**: Guarantees that money transfers always balance, even if the system crashes or many users act at once, so your ledger is never wrong.
-- **Grows with your business**: How easily the database handles more users and data by adding more computers, without making your software much more complicated.
-- **Raw speed coding**: How close the database code is to the computer's hardware, allowing for extreme speed by avoiding overhead from programming languages or operating systems.
+- **Built-in Accounting Logic**: It has core features that automatically handle financial rules like debits, credits, and two-phase transfers, ensuring account balances are always consistent.
+- **Standard SQL Access**: Data interaction primarily happens through widely recognized SQL (Structured Query Language), offering familiarity and compatibility with many tools.
+- **Cloud Managed Service**: A vendor provides the database as a hosted solution, taking care of setup, scaling, backups, and maintenance, reducing your operational burden.
+- **Low-Level Performance**: Its architecture is fundamentally optimized for extreme transaction throughput and low latency by minimizing overhead and direct hardware interaction.
 
-| Product | Financial terms built-in | Money transaction safety | Grows with your business | Raw speed coding |
+| Product | Built-in Accounting Logic | Standard SQL Access | Cloud Managed Service | Low-Level Performance |
 | --- | --- | --- | --- | --- |
-| **TigerBeetle** | **Full**. Financial entities (accounts, transfers) and rules (double-entry, pending transfers, balances) are core primitives, validated at the database level. (e.g. src/tigerbeetle.zig defines Account, Transfer, AccountFlags). | **Full**. Provides strict ACID compliance for every transfer with double-entry validation at the database level, preventing imbalances even in distributed failures. (e.g. src/state_machine.zig shows atomic create_transfers with complex flag validations). | **Easy**. Designed for horizontal scaling with a built-in VSR (Viewstamped Replication) consensus protocol that handles data distribution and fault tolerance automatically. (e.g. README.md mentions 'global consensus protocol'). | **Full**. Written in Zig for bare-metal performance, minimal overhead, direct memory management, and fine-grained control over system resources. (e.g. src/vsr/checksum.zig uses hardware-accelerated AES instructions directly). |
-| **PostgreSQL** | **None**. Stores data in generic tables; 'account' and 'transfer' are just names for rows and columns, with financial logic enforced by application code. | **Full**. Offers strong ACID properties for SQL transactions, relying on row-level locks and transaction isolation to ensure data integrity. | **Hard**. Scaling beyond a single node typically involves complex application-level sharding, replication (read replicas), or external tools for distributed transactions. | **Good**. Written in C, offering low-level control, but still operates within a general-purpose operating system and database architecture. |
-| **FoundationDB** | **None**. Stores generic key-value pairs; financial concepts are entirely built and enforced by the application layer on top. | **Full**. Provides distributed ACID transactions across its entire dataset, ensuring consistency and isolation for complex operations at scale. | **Easy**. Built for seamless horizontal scaling across many commodity servers, automatically distributing data and operations efficiently. | **Good**. Core is C++, optimized for performance, but uses a higher-level abstraction than Zig for managing data structures and concurrency. |
-| **ScyllaDB (Apache Cassandra)** | **None**. Stores generic rows in tables; financial semantics are solely managed by the application layer, not the database itself. | **Eventual**. Trades immediate consistency for high availability and throughput; application logic must handle potential data inconsistencies and implement compensating transactions to ensure financial correctness. | **Easy**. Inherently distributed, designed to scale out by adding more nodes without requiring complex application-level sharding or coordination. | **Full**. Written in C++ and highly optimized to run 'close to the hardware,' using techniques like user-space networking and custom schedulers to bypass OS overhead. |
-| **Custom Ledger on RocksDB** | **Partial**. The underlying RocksDB is generic, but the custom logic built on top explicitly implements financial terms directly in highly optimized data structures and application code. | **Custom**. Safety depends entirely on the custom application logic, which may range from eventually consistent to highly-tuned ACID guarantees implemented manually at the application level. | **Hard**. Scaling requires manually implementing distributed coordination, replication, and sharding across multiple instances, adding significant complexity to the bespoke solution. | **Full**. RocksDB itself is highly optimized C++, and a custom wrapper can achieve bare-metal performance by carefully managing data access and system calls, often bypassing OS abstractions. |
+| **TigerBeetle** | **Yes**. Purpose-built for double-entry accounting, ACID guarantees, and pending transfers. | **No**. Uses a custom binary protocol API; no SQL support. | **No**. Requires users to self-host and manage their own infrastructure. | **Extreme**. Written in Zig, optimized for ultra-low latency and high-volume financial transactions. |
+| **PostgreSQL** | **No**. Requires extensive application logic or third-party extensions for accounting rules. | **Yes**. Provides full support for standard SQL queries and commands. | **Yes**. Widely available through numerous managed cloud providers (e.g., AWS RDS, Google Cloud SQL). | **Moderate**. A general-purpose relational database, capable but not designed for extreme raw financial transaction throughput. |
+| **CockroachDB** | **No**. Accounting logic must be implemented at the application layer. | **Yes**. Offers a distributed SQL interface compatible with PostgreSQL. | **Yes**. Available as a fully managed cloud service (CockroachDB Cloud). | **High (Distributed)**. Optimized for distributed ACID transactions and horizontal scalability, but still a general-purpose database. |
+| **Custom Ledger on PostgreSQL** | **Partial (App Layer)**. Accounting rules are enforced by application code, not natively by the database engine. | **Yes**. Interacts with the underlying PostgreSQL database using standard SQL. | **Depends on Hosting**. The PostgreSQL instance can be cloud-managed, but the custom application logic is not. | **Moderate**. Performance is limited by the underlying PostgreSQL database and the overhead of application-side accounting logic. |
 
 ## Hiding in the code
 
-### Marzullo's Clock Synchronization
-_src/vsr/clock.zig_
+### Cluster-wide synchronized clock
+_src/vsr/clock.zig, src/vsr/marzullo.zig_
 
-The product is betting on absolute precision and consistency of time across a distributed cluster, a critical requirement for financial ledgers, implemented with a sophisticated academic algorithm.
+The product is betting that perfectly ordered, globally synchronized timestamps are a critical primitive for financial integrity and complex ledger rules, far beyond what simple `now()` calls or NTP provide. This enables robust fraud detection, accurate accounting, and complex financial product modeling without relying on external time services.
 
-### Proactive Data Scrubber
-_src/vsr/grid_scrubber.zig_
+### Proactive data scrubbing and repair
+_src/vsr/grid_scrubber.zig, src/vsr/grid.zig, src/vsr/repair_budget.zig_
 
-The product prioritizes extreme data durability and integrity by continuously scanning for and repairing latent disk errors in the background, a safeguard beyond typical transactional consistency.
+TigerBeetle prioritizes absolute data integrity and continuous availability even in the face of hardware failures and network issues. This builds trust by ensuring the ledger is self-healing and resistant to subtle data degradation, minimizing the risk of data loss from multiple intersecting faults.
 
-### Native Two-Phase Transfers
-_src/state_machine.zig (TransferFlags), src/clients/go/README.md_
+### Atomic linked operations
+_src/tigerbeetle.zig (AccountFlags, TransferFlags), src/state_machine.zig (scope_open, scope_close, linked_event_failed)_
 
-The product deeply understands complex financial workflows, baking atomic two-phase commit logic (pending, post, void) directly into its core, simplifying client-side implementation of conditional transfers.
+Many complex financial operations involve multiple interdependent ledger entries (e.g., transfers between internal accounts, multi-party settlements). Providing native, performant atomic linking simplifies application logic and ensures strong consistency for these compound operations, reducing the burden on application developers.
 
-### Historical Balances for Audit
-_src/state_machine.zig (AccountFlags.history, AccountEvent, ChangeEventsFilter), src/clients/go/README.md_
+### Flexible query engine over LSM trees
+_src/lsm/groove.zig, src/lsm/scan_builder.zig, src/lsm/scan_merge.zig, src/lsm/scan_tree.zig, src/lsm/table.zig, src/state_machine.zig (prefetch_query_accounts, prefetch_query_transfers)_
 
-The product is designed for rigorous auditability and regulatory compliance, offering not just current state but a full, immutable history of account balances and event changes as a first-class feature.
+While a core ledger needs high-throughput writes, the ability to perform arbitrary, powerful analytical queries on transactional data is a significant differentiator. The custom LSM is built for this dual goal of high-throughput writes and flexible reads, not just simple ID lookups, positioning it for rich financial analytics.
 
-### Custom LSM with Specialized Merge Algorithms
-_src/lsm/k_way_merge.zig, src/lsm/zig_zag_merge.zig, src/lsm/groove.zig_
+### Historical data import/migration
+_src/tigerbeetle.zig (AccountFlags.imported, TransferFlags.imported), src/state_machine.zig (create_account, create_transfer logic for imported flag), src/clients/python/README.md_
 
-The product is built for extreme, domain-specific performance, investing heavily in a bespoke storage engine with highly tailored indexing, caching (CLOCK Nth-Chance), and optimized merge strategies for financial data.
+The product anticipates that large enterprises will need to migrate massive amounts of historical financial data into TigerBeetle without altering historical timestamps, providing a critical feature for adoption in regulated industries that value audit trails and data immutability.
 
-### Robust Client Idempotency & Retries
-_src/vsr/client_replies.zig, src/tigerbeetle.zig (CreateTransferStatus.transient)_
+### Fine-grained error codes and idempotency
+_src/tigerbeetle.zig (CreateAccountStatus, CreateTransferStatus), src/state_machine.zig (transient_error function), src/clients/*/README.md_
 
-The product anticipates unreliable network environments and client failures, providing strong end-to-end idempotency guarantees and built-in mechanisms for clients to safely retry and recover from in-flight requests.
+Financial systems demand extremely precise feedback on transaction outcomes, enabling intelligent application-side retry logic and robust system integrations. Built-in idempotency simplifies client-side error recovery and ensures ledger consistency even with retries, fostering trust and operational efficiency.
 
 ## Missing on purpose
 
-### No SQL or Query Language
-_README.md, src/clients/*/README.md show only structured API calls (create_accounts, lookup_accounts, query_accounts) with fixed filter structs, no mention of SQL parser or query engine._
+### No general-purpose SQL interface
+_The codebase lacks a SQL parser, query optimizer, or execution engine. Querying is exposed through specific API calls like `query_accounts` or `get_account_transfers` using structured filter structs (e.g., `QueryFilter` in `src/tigerbeetle.zig`), rather than arbitrary string queries._
 
-Chooses maximum performance and a highly opinionated, optimized API surface over general-purpose data querying flexibility. This limits how developers can interact with data but ensures predictable high throughput. Risk: steep learning curve for developers accustomed to SQL.
+Prioritizes extreme performance, type safety, and direct control over query execution, avoiding the overhead and potential for inefficient queries that a generic SQL engine might introduce. This comes at the cost of developer familiarity and ad-hoc querying flexibility; complex data retrieval patterns not directly supported by current filters require more application-side code.
 
-### No Generic Distributed Transactions
-_Only specific 'two-phase transfers' are implemented natively; no mentions of general XA transaction support or broader distributed commit protocols for arbitrary operations._
+### No user-defined logic/smart contracts
+_There is no `EVM`, WebAssembly runtime, or any other mechanism to embed custom business logic or 'smart contracts' within the ledger itself. All operations (`Operation` enum in `src/tigerbeetbe.zig`) are predefined ledger primitives._
 
-Focuses laser-like on the core financial transfer primitive, avoiding the complexity and performance overhead of generic distributed transaction coordinators. This keeps the core lean but means clients must build custom distributed transaction logic for other use cases.
+Focuses solely on being a highly performant, auditable, and immutable ledger primitive. Offloads complex business logic to the application layer, reducing the attack surface and increasing predictability and performance of the core ledger. This risks alienating users who seek more 'programmable' ledgers, increasing application-side complexity for ledger-driven logic.
 
-### No User or Access Management
-_No `CREATE USER`, `GRANT`, `REVOKE` commands or related data structures in the codebase or client APIs._
+### No integrated auditing/reporting dashboards
+_While `ChangeEvent` and `AccountEvent` structs in `src/state_machine.zig` store detailed audit trails, there is no built-in web UI, API for reporting dashboards, or visualization tools within the codebase. The `README.md` and client samples focus entirely on programmatic interaction._
 
-Delegates user authentication and authorization concerns entirely to an external application layer or identity provider. This allows the database to stay focused on ledger integrity but requires clients to implement their own security boundaries.
+Maintains a minimalist, headless database design, focusing on its core strengths as a backend ledger. Avoids the overhead and maintenance burden of UI components. Assumes users will integrate with existing Business Intelligence (BI) tools or build their own custom dashboards on top of the raw data. This can increase the barrier to initial data exploration and operational visibility for non-developers.
 
-### No Integrated Analytics Dashboards
-_The API provides raw data access, but there's no code related to visualization, aggregation, or connecting to BI tools directly within the database context._
+### No multi-tenancy or fine-grained access control
+_The codebase does not contain tables or logic for `Tenant` management, `User` roles, or `ACL` mechanisms tied to specific operations or data subsets within the ledger itself. Access control is primarily at the client and cluster ID level._
 
-Positions itself as a high-performance transactional data store rather than an analytical platform. It focuses on the source-of-truth for financial data, expecting other systems to consume and analyze that data.
+Simplifies the core security model to focus on data integrity and correctness across a single logical cluster. Assumes that multi-tenancy and fine-grained authorization are handled at the application layer, which is a common pattern for high-performance financial systems. This shifts the burden of implementing complex, secure access control to the application, which can be challenging to implement correctly and consistently.
 
-### No Multi-Tenant Isolation
-_The concept of `cluster_id` is present, but no logical separation or isolation for multiple distinct clients/organizations within a single running instance of TigerBeetle._
+### No built-in replication topology management UI
+_The `README.md` shows command-line tools (`tigerbeetle format`, `tigerbeetle start`) for basic cluster operations. There is no web-based or API-driven UI for managing the VSR cluster topology (adding/removing replicas, monitoring health beyond raw logs, configuring parameters dynamically)._
 
-Designed for dedicated, single-purpose financial ledgers per cluster, simplifying internal architecture and maximizing performance by avoiding multi-tenancy overhead. This implies higher operational costs for customers needing multiple isolated ledgers.
+Prioritizes automated, resilient cluster management via consensus protocols over manual, operator-driven configuration changes through a UI. Aims for a 'hands-off' operational model for the core database where the system self-organizes. This means operational tasks that require manual intervention might be complex, relying on scripting or external tooling rather than integrated graphical features.

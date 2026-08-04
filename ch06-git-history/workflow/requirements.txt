@@ -1,0 +1,6 @@
+# Install shared deps first:
+#     pip install -r ../../utils/requirements.txt
+# (provides pocketflow, pyyaml, markdown-it-py, and your LLM provider SDK.)
+#
+# This chapter reads git through the `git` CLI (subprocess), so a working
+# `git` on your PATH is the only extra requirement. No new Python deps.

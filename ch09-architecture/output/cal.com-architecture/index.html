@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cal.com: architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+</script>
+<script>
+  window.addEventListener('load', async function () {
+    if (window.hljs) { try { hljs.highlightAll(); } catch (e) {} }
+    if (!window.mermaid) return;
+    var blocks = document.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < blocks.length; i++) {
+      var el = blocks[i], src = el.textContent;
+      try {
+        if ((await mermaid.parse(src, { suppressErrors: true })) === false) { el.remove(); continue; }
+        var out = await mermaid.render('mmd' + i, src);
+        el.innerHTML = out.svg;
+      } catch (e) { el.remove(); }
+    }
+  });
+</script>
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #fff; --text: #101828; --muted: #667085;
+    --faint: #98a2b3; --rule: #e4e7ec; --line: #eef0f3;
+    --accent: #d97706; --accent-soft: #fffbeb; --good: #16a34a; --stone: #9aa4b2;
+    --stone-bg: #f2f4f7; --shadow: 0 1px 2px rgba(16,24,40,.05); --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 13.5px; line-height: 1.5; background: var(--bg); color: var(--text); margin: 0;
+    -webkit-font-smoothing: antialiased; }
+  code, .mono { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; }
+  main { max-width: 1280px; margin: 0 auto; padding: 0 24px 56px; }
+
+  .hero { background: radial-gradient(120% 140% at 50% 0%, #3a2607 0%, #1c1203 70%);
+    color: #fff; padding: 46px 20px 42px; text-align: center; }
+  .hero-inner { max-width: 1120px; margin: 0 auto; }
+  .hero-diagram { margin: 18px 0 4px; }
+  .hero-diagram-cap { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); margin: 0 2px 9px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 7px; color: #fcd34d;
+    font-size: .68rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+  .eyebrow::before { content: ''; width: 16px; height: 2px; background: #f59e0b; border-radius: 2px; }
+  .hero h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -.025em; margin: 12px 0 10px; }
+  .hero .sub { font-size: .94rem; color: #eee0c4; margin: 0 auto; line-height: 1.6; }
+
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin: 42px 2px 14px; }
+  .sec-n { font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 700; color: var(--accent); }
+  .sec-label { display: flex; align-items: center; gap: 9px; font-size: .68rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .sec-label::before { content: ''; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+  .sec-note { font-size: .8rem; color: var(--faint); }
+  .scroll-hint { margin-left: auto; font-size: .68rem; font-weight: 600; color: var(--faint); }
+
+  /* Friendly "start here" welcome + per-section intros */
+  .intro { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 24px; margin: 30px 0 4px; }
+  .intro-label { font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px; }
+  .intro p { margin: .5em 0; font-size: .96rem; color: #344054; line-height: 1.7; }
+  .intro p:first-child { margin-top: 0; }
+  .intro strong { color: var(--text); }
+  .sec-intro { font-size: .9rem; color: #475467; line-height: 1.6; margin: -4px 2px 12px; }
+  .sec-intro p { margin: 0; }
+
+  .verdict { background: var(--accent-soft); border: 1px solid #fde68a; border-radius: var(--radius);
+    padding: 12px 16px; margin-bottom: 14px; font-size: .9rem; color: #713f12; }
+  .verdict strong { color: #78350f; }
+
+  .diagram { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; overflow-x: auto; }
+  .diagram pre.mermaid { margin: 0; text-align: center; background: transparent; }
+  .diagram pre.mermaid svg { max-width: 100%; height: auto; }
+
+  .rail { display: flex; gap: 16px; align-items: stretch; overflow-x: auto;
+    scroll-snap-type: x proximity; padding: 4px 2px 18px; margin: 0; list-style: none; }
+  .rail::-webkit-scrollbar { height: 9px; }
+  .rail::-webkit-scrollbar-track { background: var(--line); border-radius: 5px; }
+  .rail::-webkit-scrollbar-thumb { background: #cbd2dc; border-radius: 5px; }
+
+  .scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+  .scroll::-webkit-scrollbar { width: 9px; }
+  .scroll::-webkit-scrollbar-thumb { background: #dce0e7; border-radius: 5px; }
+
+  .card { scroll-snap-align: start; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); box-shadow: var(--shadow); border-top: 3px solid var(--accent);
+    display: flex; flex-direction: column; overflow: hidden; max-height: 72vh; }
+  .card-top { flex-shrink: 0; padding: 14px 18px 12px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #fffdf7, #fff); font-weight: 700; font-size: .96rem; line-height: 1.35; }
+  .card-top code { font-size: .82em; }
+  .card-body { padding: 13px 18px 16px; font-size: .84rem; }
+  .card-body p { margin: .5em 0; color: #344054; line-height: 1.6; }
+  .card-body p:first-child { margin-top: 0; }
+  .card-body strong { color: var(--text); }
+  .card-body em { color: var(--muted); }
+  .card-body ul, .card-body ol { margin: .5em 0; padding-left: 1.3em; }
+  .card-body li { margin: .28em 0; color: #344054; line-height: 1.55; }
+
+  .rail.inv .card { flex: 0 0 380px; width: 380px; }
+  .rail.tech .card { flex: 0 0 420px; width: 420px; }
+  .rail.trace .card { flex: 0 0 460px; width: 460px; }
+
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 11px 13px; overflow-x: auto; margin: 10px 0; }
+  pre code { padding: 0; font-size: .74rem; line-height: 1.5; }
+  pre code.hljs { background: transparent; padding: 0; color: #e2e8f0; }
+  code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .84em;
+    background: var(--stone-bg); color: var(--text); padding: 1px 5px; border-radius: 4px; }
+
+  footer { color: var(--faint); font-size: .74rem; text-align: center; margin-top: 44px;
+    padding-top: 18px; border-top: 1px solid var(--rule); }
+  @media (max-width: 560px) { .card { flex-basis: 86vw !important; width: 86vw !important; } }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">Architecture</span>
+      <h1>cal.com</h1>
+      <p class="sub">Cal.com is a service-oriented scheduling platform, featuring a Next.js frontend (Calcom) that communicates with a dedicated NestJS backend API (Calcom API). This codebase reveals a distributed architecture, leveraging PostgreSQL for persistent data and Redis for caching or session management, while deeply integrating with numerous external SaaS providers to deliver its comprehensive scheduling capabilities.</p>
+    </div>
+  </header>
+  <main>
+    <section class="hero-diagram">
+      <div class="hero-diagram-cap">The whole system on one map</div>
+      <div class="diagram"><pre class="mermaid">flowchart LR
+    subgraph CLIENT
+        direction LR
+        web_browser["Web Browser"]
+    end
+
+    subgraph RUN
+        direction LR
+        calcom["Web App Server"]
+        calcom_api["Backend API"]
+        cron_tasks["Cron Jobs"]
+    end
+
+    subgraph RENT
+        direction LR
+        postgres["PostgreSQL Database"]
+        redis["Redis Cache & Queue"]
+    end
+
+    subgraph CALL
+        direction LR
+        sentry["Sentry Error Tracking"]
+        stripe["Stripe Payments"]
+        google_apis["Google APIs"]
+        sendgrid["SendGrid Emails"]
+        axiom["Axiom Logging"]
+        trigger_dev["Trigger.dev Workflow"]
+        dub["Dub Link Shortener"]
+        vital_api["Vital API"]
+        retell_ai["Retell AI"]
+    end
+
+    classDef CLIENT fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef RUN fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef RENT fill:#bfb,stroke:#333,stroke-width:2px;
+    classDef CALL fill:#ffb,stroke:#333,stroke-width:2px;
+
+    web_browser:::CLIENT
+    calcom:::RUN
+    calcom_api:::RUN
+    cron_tasks:::RUN
+    postgres:::RENT
+    redis:::RENT
+    sentry:::CALL
+    stripe:::CALL
+    google_apis:::CALL
+    sendgrid:::CALL
+    axiom:::CALL
+    trigger_dev:::CALL
+    dub:::CALL
+    vital_api:::CALL
+    retell_ai:::CALL
+
+    web_browser --> calcom
+    calcom --> calcom_api
+    calcom -.-> sentry
+    calcom -.-> axiom
+    calcom --> dub
+    calcom_api --> postgres
+    calcom_api --> redis
+    calcom_api -.-> sentry
+    calcom_api --> stripe
+    calcom_api --> google_apis
+    calcom_api -.-> sendgrid
+    calcom_api -.-> axiom
+    calcom_api -.-> trigger_dev
+    calcom_api --> vital_api
+    calcom_api --> retell_ai
+    cron_tasks --> calcom_api</pre></div>
+    </section>
+
+    <div class="sec-head">
+      <span class="sec-n">01</span>
+      <div class="sec-label">The inventory</div>
+      <div class="sec-note">every node, sorted by band: run · rent · call · client</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section presents the complete map of cal.com's 15 services and data stores, visually distinguishing between internal and externally managed components. Notice the significant number of integrated external SaaS providers, indicating a reliance on third-party services for key functionalities.</p>
+</div>
+    <ul class="rail inv">
+      <li class="card">
+        <div class="card-top">1 · calcom_api</div>
+        <div class="scroll"><div class="card-body"><p>(RUN, code · <code>apps/api/v2/</code>) This is our core backend, a NestJS application handling all business logic, user authentication, data management, and integrations with external services.
+→ postgres (sync, internal), redis (sync, internal), sentry (async, public), stripe (sync, public), google_apis (sync, public), sendgrid (async, public), axiom (async, public), trigger_dev (async, public), vital_api (sync, public), retell_ai (sync, public)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">2 · postgres</div>
+        <div class="scroll"><div class="card-body"><p>(RENT, config · <code>DATABASE_URL</code> / <code>database</code> service) This is our primary data store, a PostgreSQL database that persistently stores all application data, such as user profiles, event types, and bookings.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">3 · redis</div>
+        <div class="scroll"><div class="card-body"><p>(RENT, config · <code>REDIS_URL</code> / <code>redis</code> service) This is an in-memory data store used for caching frequently accessed data to speed up responses and as a message broker for job queues.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">4 · calcom</div>
+        <div class="scroll"><div class="card-body"><p>(RUN, code · <code>apps/web/</code>) This is our Next.js web application server, responsible for server-side rendering, handling client-side routing, and acting as a gateway that sometimes processes requests directly or proxies them to the Backend API.
+→ calcom_api (sync, internal), sentry (async, public), axiom (async, public), dub (sync, public)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">5 · web_browser</div>
+        <div class="scroll"><div class="card-body"><p>(CLIENT, code · N/A) This represents the user's web browser, where the client-side code of our Next.js application runs, allowing users to interact with our platform.
+→ calcom (sync, internal)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">6 · cron_tasks</div>
+        <div class="scroll"><div class="card-body"><p>(RUN, config · <code>apps/web/vercel.json</code>) These are scheduled background jobs managed by Vercel's cron service, designed to perform routine maintenance, data synchronization, and other periodic tasks.
+→ calcom_api (sync, internal)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">7 · sentry</div>
+        <div class="scroll"><div class="card-body"><p>(CALL, config · <code>SENTRY_DSN</code>) This is an external service we use for real-time error tracking and performance monitoring, helping us identify and fix issues quickly.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">8 · axiom</div>
+        <div class="scroll"><div class="card-body"><p>(CALL, config · <code>AXIOM_DATASET</code>) This is an external logging and observability platform where we send application logs to help diagnose issues and understand system behavior.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">9 · stripe</div>
+        <div class="scroll"><div class="card-body"><p>(CALL, config · <code>STRIPE_API_KEY</code>) This is our trusted third-party payment processing platform, handling all financial transactions like subscriptions and one-off payments.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">10 · google_apis</div>
+        <div class="scroll"><div class="card-body"><p>(CALL, config · <code>GOOGLE_API_CREDENTIALS</code>) This refers to various Google services we integrate with, primarily for calendar synchronization and OAuth-based user authentication.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">11 · sendgrid</div>
+        <div class="scroll"><div class="card-body"><p>(CALL, config · <code>SENDGRID_API_KEY</code>) This is an external email delivery service used to reliably send out notifications, reminders, and marketing communications to users.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">12 · trigger_dev</div>
+        <div class="scroll"><div class="card-body"><p>(CALL, config · <code>TRIGGER_API_URL</code>) This is an external event-driven framework for building and running long-running background jobs and workflows, offloading complex tasks from our main API.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">13 · dub</div>
+        <div class="scroll"><div class="card-body"><p>(CALL, config · N/A) This is an external link shortening and analytics service used to create concise URLs and track their engagement.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">14 · vital_api</div>
+        <div class="scroll"><div class="card-body"><p>(CALL, config · <code>VITAL_API_KEY</code>) This is an external API for integrating with health and fitness data, allowing users to connect and manage their vital metrics.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">15 · retell_ai</div>
+        <div class="scroll"><div class="card-body"><p>(CALL, config · <code>RETELL_AI_KEY</code>) This is an external AI service integrated into our backend to power conversational AI experiences and smart interactions within the platform.
+→ (terminal — vendor)</p>
+</div></div>
+      </li>
+    </ul>
+    <div class="sec-head">
+      <span class="sec-n">02</span>
+      <div class="sec-label">Tech stack</div>
+      <div class="sec-note">open each box: the real technology inside the label</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>Here, you'll find the underlying technologies powering each service and store on the map, detailing their specific frameworks, languages, and databases. Observe the core usage of Next.js for the frontend, NestJS for the API layer, and the foundational roles of PostgreSQL and Redis.</p>
+</div>
+    <ul class="rail tech">
+      <li class="card">
+        <div class="card-top">1 · calcom_api — the backend brain</div>
+        <div class="scroll"><div class="card-body"><p>This is the brain of our operation, a dedicated backend that handles all the complex logic, user accounts, and connections to other services, making sure everything runs smoothly behind the scenes.</p>
+<p>Under the hood, it's a NestJS application (a Node.js framework) built with TypeScript. It talks to PostgreSQL using Prisma (and raw <code>pg</code> queries for some operations) and interacts with Redis via the <code>ioredis</code> client. It also orchestrates integrations with Stripe for payments, Google APIs for calendars, and SendGrid for emails, with Sentry for error tracking.</p>
+<pre><code class="language-ts">import { SentryGlobalFilter, SentryModule } from &quot;@sentry/nestjs/setup&quot;;
+import { Redis } from &quot;ioredis&quot;;
+import Stripe from &quot;stripe&quot;;
+</code></pre>
+<p>See <code>apps/api/v2/src/app.module.ts</code> (line 7), <code>apps/api/v2/src/modules/redis/redis.service.ts</code> (line 4), and <code>apps/api/v2/src/modules/stripe/stripe.service.ts</code> (line 16).</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">2 · postgres — the data filing cabinet</div>
+        <div class="scroll"><div class="card-body"><p>Our primary data store is PostgreSQL, acting like our digital filing cabinet where all important information like user profiles, event details, and booking records are securely stored, ready to be retrieved at a moment's notice.</p>
+<p>This is a managed PostgreSQL relational database, accessed by our <code>calcom_api</code> application using a standard <code>postgresql</code> connection string. Prisma is the ORM (Object-Relational Mapper) layer, abstracting database interactions, and it's also directly queried using the <code>pg</code> client library.</p>
+<pre><code class="language-yaml">services:
+  database:
+    image: postgres
+    environment:
+      - POSTGRES_DB=calendso
+</code></pre>
+<p>Configuration details can be found in <code>docker-compose.yml</code> (<code>database</code> service) and environment variables like <code>DATABASE_URL</code>.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">3 · redis — the super-fast scratchpad</div>
+        <div class="scroll"><div class="card-body"><p>Next, we have Redis, which acts like a super-fast scratchpad for frequently needed data and a to-do list for tasks that can be handled later, ensuring our application stays quick and responsive.</p>
+<p>This is a managed Redis instance, functioning as an in-memory key-value store for caching and as a message broker for job queues. The <code>calcom_api</code> connects to it using the <code>ioredis</code> client over the <code>REDIS_URL</code> environment variable.</p>
+<pre><code class="language-ts">import { Redis } from &quot;ioredis&quot;;
+// ...
+this.redis = new Redis(dbUrl);
+</code></pre>
+<p>See the Redis service definition in <code>docker-compose.yml</code> and <code>apps/api/v2/src/modules/redis/redis.service.ts</code> (line 4 and 16).</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">4 · calcom — the web storefront</div>
+        <div class="scroll"><div class="card-body"><p>Our main user-facing application is the Cal.com web storefront, which is what users see and interact with directly, handling everything from displaying web pages to collecting user input.</p>
+<p>This is a Next.js application (a React framework for Node.js) that performs server-side rendering and client-side routing. It's configured to handle various rewrites and headers via <code>next.config.ts</code> and integrates with <code>next-axiom</code> for logging and <code>@sentry/nextjs</code> for client-side error tracking.</p>
+<pre><code class="language-ts">import type { NextConfig } from &quot;next&quot;;
+import { withAxiom } from &quot;next-axiom&quot;;
+import * as Sentry from &quot;@sentry/nextjs&quot;;
+</code></pre>
+<p>See <code>apps/web/next.config.ts</code> (plugin integration) and <code>apps/web/instrumentation-client.ts</code> (line 4) for Sentry setup.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">5 · web_browser — the user's window</div>
+        <div class="scroll"><div class="card-body"><p>This isn't a server we manage, but the web browser represents the user's window through which they experience Cal.com, running the interactive parts of our website right on their device.</p>
+<p>This refers to the client-side environment where JavaScript, HTML, and CSS delivered by the <code>calcom</code> Next.js application are executed. It provides the interactive user interface and client-side logic that users directly engage with.</p>
+<p>No specific code block applies here as this represents the user's environment, not a deployed service.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">6 · cron_tasks — the silent helpers</div>
+        <div class="scroll"><div class="card-body"><p>Our cron tasks are like our silent helpers, performing routine chores like tidying up data or sending out scheduled notifications, making sure everything runs smoothly in the background without user intervention.</p>
+<p>These are recurring serverless functions, defined as cron jobs within <code>apps/web/vercel.json</code> and executed by the Vercel platform. They trigger specific API endpoints (e.g., <code>/api/cron/calendar-subscriptions</code>) within the <code>calcom_api</code> to perform their tasks.</p>
+<pre><code class="language-json">{
+  &quot;crons&quot;: [
+    {
+      &quot;path&quot;: &quot;/api/cron/calendar-subscriptions&quot;,
+      &quot;schedule&quot;: &quot;*/5 * * * *&quot;
+    }
+  ],
+  &quot;functions&quot;: {}
+}
+</code></pre>
+<p>The schedule and paths for these tasks are defined in <code>apps/web/vercel.json</code> (line 3).</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">7 · sentry — the error watchdog</div>
+        <div class="scroll"><div class="card-body"><p>Sentry is our vigilant watchdog, barking whenever something goes wrong, alerting us to errors in our application so we can fix them quickly, often before they disrupt our users too much.</p>
+<p>This is an external Software-as-a-Service (SaaS) platform for real-time error tracking and performance monitoring. Our application integrates with it using the <code>@sentry/nextjs</code> SDK for the <code>calcom</code> frontend and <code>@sentry/nestjs</code> for the <code>calcom_api</code> backend, configured via environment variables like <code>SENTRY_DSN</code>.</p>
+<pre><code class="language-ts">import * as Sentry from &quot;@sentry/nextjs&quot;;
+import { SentryGlobalFilter, SentryModule } from &quot;@sentry/nestjs/setup&quot;;
+</code></pre>
+<p>See <code>apps/api/v2/src/app.module.ts</code> (line 7), <code>apps/web/instrumentation-client.ts</code> (line 4), and <code>apps/web/sentry.server.config.ts</code> (line 7).</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">8 · axiom — the digital notebook</div>
+        <div class="scroll"><div class="card-body"><p>Axiom is our digital notebook, meticulously recording everything that happens within our application, giving us a clear history to review if we ever need to understand why something behaved a certain way.</p>
+<p>This is an external logging and observability platform. The <code>calcom</code> Next.js application integrates via <code>next-axiom</code> (a plugin for Next.js), sending logs from both client and server-side contexts. The <code>calcom_api</code> also utilizes Axiom, likely through a logging transport like <code>@axiomhq/winston</code>.</p>
+<pre><code class="language-ts">import { withAxiom } from &quot;next-axiom&quot;;
+// ...
+plugins.push(withAxiom);
+</code></pre>
+<p>The integration is visible in <code>apps/web/next.config.ts</code> (line 211) where <code>withAxiom</code> is applied as a plugin. <code>AXIOM_DATASET</code> is an important environment variable for its configuration.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">9 · stripe — the secure cashier</div>
+        <div class="scroll"><div class="card-body"><p>Stripe is our secure cashier, reliably handling all payments, subscriptions, and financial transactions, so you can focus on your meetings, not on billing hassles.</p>
+<p>This is a trusted third-party payment processing platform. The <code>calcom_api</code> integrates with Stripe using their official Node.js client library (<code>stripe</code>), leveraging <code>STRIPE_API_KEY</code> for server-side operations. The <code>calcom</code> frontend likely uses <code>@stripe/react-stripe-js</code> for client-side payment forms.</p>
+<pre><code class="language-ts">import Stripe from &quot;stripe&quot;;
+// ...
+this.stripe = new Stripe(configService.get(&quot;stripe.apiKey&quot;, { infer: true }) ?? &quot;&quot;, {
+</code></pre>
+<p>See <code>apps/api/v2/src/modules/stripe/stripe.service.ts</code> (line 16 and 51), and <code>packages/app-store/stripepayment/lib/PaymentService.ts</code> (line 1 and 42).</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">10 · google_apis — the Google diplomat</div>
+        <div class="scroll"><div class="card-body"><p>The Google APIs are our direct lines to Google's services, mainly used to keep your calendar in sync with Cal.com and to allow you to log in securely using your Google account.</p>
+<p>We integrate with various Google APIs (Calendar, OAuth2, Admin) using the <code>googleapis</code> Node.js client library. Authentication for these services is primarily handled via <code>OAuth2Client</code> and <code>JWT</code> tokens from <code>googleapis-common</code>, configured with <code>GOOGLE_API_CREDENTIALS</code> and <code>GOOGLE_CLIENT_ID</code>/<code>GOOGLE_CLIENT_SECRET</code>.</p>
+<pre><code class="language-ts">import { OAuth2Client } from &quot;googleapis-common&quot;;
+import { JWT } from &quot;googleapis-common&quot;;
+</code></pre>
+<p>See <code>apps/api/v2/src/modules/apps/services/gcal.service.ts</code> (line 3) and <code>packages/app-store/googlecalendar/lib/CalendarAuth.ts</code> (line 2).</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">11 · sendgrid — the dedicated mail carrier</div>
+        <div class="scroll"><div class="card-body"><p>SendGrid is our dedicated mail carrier, making sure all your important emails—like booking confirmations and reminders—arrive in your inbox reliably and on time.</p>
+<p>This is a third-party email delivery service. Our <code>calcom_api</code> uses the <code>@sendgrid/client</code> Node.js library to programmatically send transactional and marketing emails. The <code>EMAIL_FROM</code> and <code>SENDGRID_API_KEY</code> environment variables are essential for its configuration.</p>
+<pre><code class="language-ts">import client from &quot;@sendgrid/client&quot;;
+import type { ClientRequest } =&gt; &quot;@sendgrid/client/src/request&quot;;
+</code></pre>
+<p>See <code>packages/lib/Sendgrid.ts</code> (line 1 and 2) which provides the client interface for SendGrid.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">12 · trigger_dev — the workflow orchestrator</div>
+        <div class="scroll"><div class="card-body"><p>Trigger.dev is our workflow orchestrator, like a smart assistant for complex, multi-step tasks; it takes care of things that might take a while or involve several steps, freeing up our main systems to focus on immediate user requests.</p>
+<p>This is an external event-driven platform for building and running background jobs and workflows. Our application sets a <code>TRIGGER_VERSION</code> environment variable, indicating integration via the <code>@trigger.dev/sdk</code> client library. The <code>TRIGGER_API_URL</code> and <code>TRIGGER_SECRET_KEY</code> environment variables are used for authentication.</p>
+<pre><code class="language-ts">import { TRIGGER_VERSION } from &quot;./trigger.version&quot;;
+// ...
+env.TRIGGER_VERSION = TRIGGER_VERSION;
+</code></pre>
+<p>See <code>apps/web/next.config.ts</code> (line 19 and 88), which sets the <code>TRIGGER_VERSION</code> environment variable. The <code>@trigger.dev/sdk</code> package is listed in <code>PACKAGE DEPENDENCIES</code>.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">13 · dub — the link shortener</div>
+        <div class="scroll"><div class="card-body"><p>Dub is our link shortener, an expert in making long, messy web addresses short and sweet, and it also helps us understand how many people click on those links.</p>
+<p>This is an external link shortening and analytics service. The <code>calcom</code> frontend uses <code>@dub/analytics</code> for tracking and client-side operations. The <code>calcom</code>'s Next.js configuration includes a rewrite rule to proxy requests from <code>/_proxy/dub/track</code> directly to <code>https://api.dub.co/track</code>.</p>
+<pre><code class="language-ts">// In apps/web/next.config.ts
+// ...
+{
+  source: &quot;/_proxy/dub/track/:path&quot;,
+  destination: &quot;https://api.dub.co/track/:path&quot;,
+},
+</code></pre>
+<p>See the rewrite rule in <code>apps/web/next.config.ts</code> (line 320). The <code>@dub/analytics</code> and <code>dub</code> packages are also listed in <code>PACKAGE DEPENDENCIES</code>.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">14 · vital_api — the health data bridge</div>
+        <div class="scroll"><div class="card-body"><p>Vital API is our health data bridge, allowing users to connect their wearable devices and apps to manage their personal wellness information within Cal.com.</p>
+<p>This is an external API for integrating with health and fitness data. The <code>calcom_api</code> uses the <code>@tryvital/vital-node</code> SDK to interact with this service. Authentication is managed via the <code>VITAL_API_KEY</code> environment variable.</p>
+<p>No explicit SDK import or client construction is shown in the provided code snippets. However, its presence is confirmed by the <code>VITAL_API_KEY</code> environment variable and <code>@tryvital/vital-node</code> in <code>PACKAGE DEPENDENCIES</code>.</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">15 · retell_ai — the conversational wizard</div>
+        <div class="scroll"><div class="card-body"><p>Retell AI is our conversational wizard, providing the smarts for interactive AI experiences within Cal.com, from automated assistants to advanced scheduling tools.</p>
+<p>This is an external AI service. The <code>calcom_api</code> likely integrates with it using the <code>retell-sdk</code> Node.js client library for backend conversational logic. The <code>RETELL_AI_KEY</code> environment variable is used for authentication.</p>
+<p>No explicit SDK import or client construction is shown in the provided code snippets. Its presence is confirmed by the <code>RETELL_AI_KEY</code> environment variable and <code>retell-sdk</code> and <code>retell-client-js-sdk</code> in <code>PACKAGE DEPENDENCIES</code>.</p>
+</div></div>
+      </li>
+    </ul>
+    <div class="sec-head">
+      <span class="sec-n">03</span>
+      <div class="sec-label">The trace</div>
+      <div class="sec-note">one request, hop by hop, and how each variant differs</div>
+      <div class="scroll-hint">swipe &rarr;</div>
+    </div>
+    <div class="sec-intro"><p>This section illustrates the exact service interaction sequence for a typical core request within cal.com, highlighting the flow from frontend to backend and data stores. Pay attention to how different request variants trigger distinct interaction paths across the services.</p>
+</div>
+    <ul class="rail trace">
+      <li class="card">
+        <div class="card-top">The trace</div>
+        <div class="scroll"><div class="card-body"><p><strong>Hop 1 — node 5 · web_browser</strong>
+The journey begins when a real user, let's call her Alice, opens a Cal.com booking link (e.g., <code>cal.com/john/30min</code>) in her web browser. She sees John's available slots, picks one that works for her, fills in her name, email, and any notes, then clicks the &quot;Confirm Booking&quot; button. (user waits) (<code>apps/web/</code>)</p>
+<p><strong>Hop 2 — node 4 · calcom</strong>
+Alice's browser sends her booking request as an API call to our main Next.js web application server. This <code>calcom</code> server acts like a smart front door, receiving the request and, based on its configuration, routes this specific API call to our dedicated backend API. (user waits) (<code>apps/web/next.config.ts:280</code>)</p>
+<p><strong>Hop 3 — node 1 · calcom_api</strong>
+The NestJS backend API, our main logic powerhouse, receives Alice's booking request. It immediately gets to work, validating all the details she provided, checking that the time slot is still available, and preparing to record the new booking. (user waits) (<code>apps/api/v2/src/main.ts</code>)</p>
+<p><strong>Hop 4 — node 2 · postgres</strong>
+The API now writes the new booking's essential information – the chosen time, Alice's contact details, and the event type – into our primary PostgreSQL database, ensuring it's durably stored. (user waits) (<code>packages/prisma/index.ts:2</code>)</p>
+<p><strong>Hop 5 — node 10 · google_apis</strong>
+Next, if John (the meeting host) has connected his Google Calendar (or another external calendar integration), our <code>calcom_api</code> makes a real-time call to the Google Calendar API. It creates a new event on John's calendar and sends an invitation directly to Alice's email address. (user waits) (<code>apps/api/v2/src/modules/cal-unified-calendars/services/google-calendar.service.ts:15</code>)</p>
+<p><strong>Hop 6 — node 3 · redis</strong>
+To keep things speedy for Alice, the <code>calcom_api</code> now puts a few follow-up tasks into a queue in Redis. These tasks include sending a formal confirmation email and triggering any webhooks (like updating a CRM), which can run in the background without making Alice wait. (user waits for enqueue) (<code>apps/api/v2/src/modules/redis/redis.service.ts:16</code>)</p>
+<p><strong>Hop 7 — node 1 · calcom_api</strong>
+Having completed all the critical, immediate steps, the <code>calcom_api</code> sends a success message back to the <code>calcom</code> Next.js frontend, confirming that the booking has been successfully processed. (user waits) (<code>apps/api/v2/src/main.ts</code>)</p>
+<p><strong>Hop 8 — node 4 · calcom</strong>
+The <code>calcom</code> frontend receives the success signal. It then renders a shiny confirmation page to Alice, showing her all the details of her newly booked meeting with John. (user waits) (<code>apps/web/next.config.ts:208</code>)</p>
+<hr />
+<h2><strong>Alice stops waiting here.</strong> The meeting is booked, and she can move on. Everything from here happens quietly in the background.</h2>
+<p><strong>Hop 9 — node 3 · redis</strong>
+Now, a background worker process (which is essentially another part of our <code>calcom_api</code> service, or a dedicated worker) fetches the pending email task that was put into the Redis queue in Hop 6. (queued for a worker) (<code>apps/api/v2/src/modules/redis/redis.service.ts:16</code>)</p>
+<p><strong>Hop 10 — node 1 · calcom_api</strong>
+This background worker, using the email sending capabilities built into the <code>calcom_api</code> codebase, carefully crafts the booking confirmation email, complete with all the event specifics for both Alice and John. (queued for a worker) (<code>packages/lib/Sendgrid.ts:1</code>)</p>
+<p><strong>Hop 11 — node 11 · sendgrid</strong>
+The worker then hands off the confirmation email to SendGrid, our external email delivery service, which ensures the email reliably reaches Alice's and John's inboxes. (queued for a worker) (<code>packages/lib/Sendgrid.ts:1</code>)</p>
+<p><strong>Hop 12 — node 12 · trigger_dev</strong>
+Finally, if John has set up any advanced, multi-step workflows for his bookings (like updating a Salesforce record or sending a personalized SMS), the <code>calcom_api</code> notifies Trigger.dev. This external workflow engine then takes over, executing these more complex, long-running processes in the background. (queued for a worker) (<code>@trigger.dev/sdk</code> in <code>package.json</code>)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Variant — Paid Event Booking</div>
+        <div class="scroll"><div class="card-body"><p>Let's imagine John charges for his time. When Alice books a paid event, an extra crucial step happens after the <code>calcom_api</code> validates the booking details (Hop 3). Before the booking is written to the database or external calendars are updated, the <code>calcom_api</code> makes a synchronous call to <strong>node 9 · stripe</strong> to process Alice's payment. Only if the payment is successful does the booking proceed through the remaining steps. If payment fails, the transaction is rolled back, and Alice receives an error. (<code>packages/app-store/stripepayment/lib/PaymentService.ts:1</code>)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Variant — Booking via a Routing Form</div>
+        <div class="scroll"><div class="card-body"><p>Sometimes, a user doesn't book a specific event directly. Instead, they might land on a &quot;routing form&quot; that asks a few questions to determine the best person or event type for them. In this scenario, Alice's initial browser request (Hop 1) would go to a <code>/forms</code> path. Our <strong>node 4 · calcom</strong> (Next.js server) recognizes this special path via its rewrite rules, directing her to our routing form application. After she submits the form, the <code>calcom</code> server sends her form data to the <code>calcom_api</code>, which then uses its logic to find the appropriate host or event type and <em>then</em> initiates the standard booking flow, possibly by redirecting Alice to the correct booking page or directly initiating the booking on her behalf. (<code>apps/web/next.config.ts:192</code>)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">Variant — Organization Member Booking on a Custom Domain</div>
+        <div class="scroll"><div class="card-body"><p>What if Alice is booking with a member of an organization that uses a custom domain, like <code>meetings.myorg.com/sarah/demo</code>? Her browser request (Hop 1) still hits <strong>node 4 · calcom</strong>, but the Next.js server intelligently recognizes the custom domain name from the incoming request's host header. Using its organization rewrite rules, <code>calcom</code> internally processes the request as if it were for <code>/org/:orgSlug/:user/:type</code>. The system resolves the organization and user details from the domain, and then the request proceeds through the rest of the trace (Hops 3-12) largely unchanged, but with all actions implicitly tied to the context of <code>myorg.com</code>. (<code>apps/web/next.config.ts:251</code>)</p>
+</div></div>
+      </li>
+      <li class="card">
+        <div class="card-top">What the variants reveal</div>
+        <div class="scroll"><div class="card-body"><p>These variants show that the Cal.com architecture is remarkably flexible and configurable, not rigid. The system uses a combination of runtime environment variables, feature flags, and sophisticated server-side routing in <code>apps/web/next.config.ts</code> to dynamically assemble the request flow based on the specific user interaction, subscription plan, or deployment context. This allows us to offer a rich, tailored experience without having to rewrite core booking logic for every single scenario.</p>
+</div></div>
+      </li>
+    </ul>
+    <footer>Overlaid from 10 config files, 396 dependencies, 108 integrations.</footer>
+  </main>
+</body>
+</html>

@@ -7,6 +7,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  // Disable auto-run synchronously so our loop controls rendering (see ch06).
+  if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+</script>
+<script>
+  window.addEventListener('load', async function () {
+    if (!window.mermaid) return;
+    var blocks = document.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < blocks.length; i++) {
+      var el = blocks[i], src = el.textContent;
+      try {
+        // Validate first, so a diagram the model got wrong is dropped silently
+        // (no "Syntax error" box) instead of rendered.
+        if ((await mermaid.parse(src, { suppressErrors: true })) === false) { el.remove(); continue; }
+        var out = await mermaid.render('mmd' + i, src);
+        el.innerHTML = out.svg;
+      } catch (e) { el.remove(); }
+    }
+  });
+</script>
 <style>
   :root {
     --bg: #f8fafc;
@@ -137,6 +158,14 @@
   }
   .callout p { margin: .4em 0 0; color: #422006; font-size: .95rem; line-height: 1.65; }
 
+  /* Counter-positioning diagram */
+  .trap-diagram { margin-top: 16px; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+  .trap-diagram .diagram-label { font-size: .65rem; font-weight: 700; letter-spacing: .14em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+  pre.mermaid { background: transparent; text-align: center; margin: 0; padding: 4px; }
+  pre.mermaid svg { max-width: 100%; height: auto; }
+
   /* Competitor matrix */
   .dim-defs {
     background: var(--surface); border: 1px solid var(--rule);
@@ -247,7 +276,7 @@
     <div class="hero-inner">
       <span class="eyebrow">Product Story</span>
       <h1><span class="name">nanochat</span></h1>
-      <p class="sub">It's ChatGPT, but a simple, minimal Python codebase designed for developers to train custom large language models cheaply and reproducibly by adjusting a single depth parameter.</p>
+      <p class="sub">It's ChatGPT, but a minimal Python tool you can run to train your own comparable chatbot from scratch on a GPU for under $50.</p>
     </div>
   </header>
 
@@ -257,7 +286,7 @@
       <div class="pain-card has-image">
         <div class="pain-label">↳ Why this exists</div>
         <div class="pain-body">
-          <p>You're a university student, excited to experiment with training your own GPT-2-level language model, but you discover it originally cost $43,000 and requires a vast, intimidating codebase hundreds of files deep. Your real competitor isn't another cloud provider, it's the overwhelming task of manually sifting through complex open-source repositories to even begin.</p>
+          <p>Maya, a grad student in AI, dreams of building her own custom language model, but every online guide points to a different, complex framework designed for massive budgets. Her real competitor isn't another tool, it's the sheer effort of stitching together various open-source projects, debugging obscure errors, and battling her single GPU's memory limits.</p>
           <img class="pain-illustration" src="pain.png" alt="before and after illustration">
         </div>
       </div>
@@ -270,28 +299,34 @@
         <div class="pos-card sacrifices">
           <h3>What it gives up</h3>
           <ul>
-            <li>It does not aim for the ultimate raw performance of state-of-the-art, multi-billion-parameter LLMs.</li>
-            <li>It trades exhaustive configurability and enterprise-grade features for opinionated simplicity and a focused 'depth' dial.</li>
-            <li>It is an 'experimental harness', implying it may not offer the production-readiness or robustness of commercial solutions.</li>
-            <li>It is primarily optimized for a specific high-performance GPU node (8xH100), with other hardware potentially offering reduced efficiency.</li>
-            <li>It sacrifices the broad applicability and flexibility of a generic LLM framework for a streamlined, minimalist codebase.</li>
+            <li>Ease of use of a finished, pre-trained model via simple API calls.</li>
+            <li>Guaranteed high quality and massive scale of models trained on huge proprietary datasets.</li>
+            <li>Broad general knowledge and robust performance across diverse tasks.</li>
+            <li>Extensive safety guardrails and moderation layers built into a commercial API.</li>
+            <li>Dedicated customer support and enterprise-grade uptime/reliability.</li>
           </ul>
         </div>
         <div class="pos-card gains">
           <h3>What it gets in return</h3>
           <ul>
-            <li>It offers extremely low-cost training for GPT-2 level models, making LLM experimentation accessible for under $100.</li>
-            <li>It provides full end-to-end control and understanding of the entire LLM stack within a single, cohesive codebase.</li>
-            <li>Its minimal and hackable Python code enables rapid iteration and experimentation for individual researchers and hobbyists.</li>
-            <li>It significantly reduces the cognitive load for users, allowing them to focus on core LLM concepts without framework complexity.</li>
-            <li>It fosters a community-driven approach to optimizing 'micro models' via a public speedrun leaderboard for GPT-2 capability.</li>
+            <li>The ability to train a full LLM from scratch for an incredibly low cost (e.g., $48 for GPT-2 capability).</li>
+            <li>Complete transparency and control over the entire codebase, from tokenizer to optimizer.</li>
+            <li>Deep understanding of LLM training mechanics by engaging with a minimalist, hackable stack.</li>
+            <li>Freedom to integrate any novel research idea or tweak without complex framework limitations.</li>
+            <li>Full ownership of the model weights and intellectual property, enabling private, custom deployments.</li>
           </ul>
         </div>
       </div>
       <div class="callout">
         <div class="callout-label">Why incumbents can't copy this</div>
-<p>Dominant incumbent commercial LLM providers like OpenAI cannot copy nanochat without destroying their business model. Their revenue relies on providing powerful, proprietary models as black-box APIs, monetizing usage rather than enabling low-cost self-training. Offering a hackable, sub-$100 training stack would cannibalize their API revenue and expose their valuable intellectual property. Similarly, large-scale open-source frameworks like DeepSpeed/Megatron-LM or even Hugging Face Transformers are designed for immense flexibility, generality, and extreme performance for complex research or enterprise needs. Copying nanochat's core principle of 'minimal, hackable' simplicity would require them to strip away layers of abstraction and configurability essential to their existing user base, alienating their target audience who prioritize power and breadth over extreme cognitive simplicity and ultra-low cost.</p>
+<p>OpenAI's entire business model and competitive advantage rest on their proprietary, large-scale, pre-trained models. Their users pay for the convenience and quality of a black-box service. If OpenAI were to offer an open-source, train-your-own-for-$50 alternative, it would directly cannibalize their core revenue, devalue their massive research and compute investments, and expose their most guarded intellectual property. Such a move would fundamentally undermine the very foundation of their existing, successful business.</p>
 
+      </div>
+      <div class="trap-diagram">
+        <div class="diagram-label">The trap, in one picture</div>
+        <pre class="mermaid">flowchart LR
+  A["OpenAI: Proprietary models"] --> B["High API costs, no code"]
+  B --> C["Nanochat: Low cost, open source training"]</pre>
       </div>
     </section>
 
@@ -299,19 +334,19 @@
       <div class="sec-label">Side by Side</div>
       <p class="sec-intro">Four dimensions that actually split the field.</p>
       <ul class="dim-defs">
-        <li><strong>Code you can see</strong>: Can you look at and change all the computer code that makes the AI work?</li>
-        <li><strong>Train a GPT for $100</strong>: Can you create an AI with GPT-2's smarts for less than $100 on rented cloud computers?</li>
-        <li><strong>All-in-one toolkit</strong>: Does it give you everything you need (making sense of text, training, fine-tuning, talking to it) all in one simple package?</li>
-        <li><strong>Easy to hack on</strong>: Is the core code simple and clean enough that a single person can easily understand and change it to experiment?</li>
+        <li><strong>Code you can read?</strong>: Can you see and change the core program files that make the model work?</li>
+        <li><strong>Train from scratch cost?</strong>: How much money does it take to train a capable model, like GPT-2, from the very beginning on your own hardware?</li>
+        <li><strong>How much control?</strong>: Can you deeply change how the model learns and behaves, beyond simple settings, or are you limited to presets?</li>
+        <li><strong>Learning curve to start?</strong>: How hard is it for someone new to LLM training to get started and achieve a basic working model?</li>
       </ul>
       <div class="matrix-wrap">
         <table class="matrix">
-          <thead><tr><th>Product</th><th>Code you can see</th><th>Train a GPT for $100</th><th>All-in-one toolkit</th><th>Easy to hack on</th></tr></thead>
+          <thead><tr><th>Product</th><th>Code you can read?</th><th>Train from scratch cost?</th><th>How much control?</th><th>Learning curve to start?</th></tr></thead>
           <tbody>
-            <tr class="you"><td class="row-head">nanochat (This Product)</td><td><span class="verdict">Open</span><span class="detail">Every file is plain Python you can fork, released under an MIT License.</span></td><td><span class="verdict">Yes</span><span class="detail">The README documents training a GPT-2 capability model for only $48 on an 8xH100 node.</span></td><td><span class="verdict">Full</span><span class="detail">It covers all major LLM stages including tokenization, pretraining, finetuning, evaluation, inference, and a chat UI.</span></td><td><span class="verdict">Yes</span><span class="detail">The code is described as 'minimal/hackable' and 'not an exhaustively configurable LLM framework'.</span></td></tr>
-            <tr><td class="row-head">OpenAI (e.g. ChatGPT/GPT-4)</td><td><span class="verdict">Closed</span><span class="detail">Access is API-only, with the underlying source code and model architecture kept private.</span></td><td><span class="verdict">No</span><span class="detail">These models are offered via API, with costs scaling per token, not for custom training from scratch.</span></td><td><span class="verdict">Partial</span><span class="detail">It provides powerful models and APIs, but not the tools for full end-to-end training of custom models.</span></td><td><span class="verdict">No</span><span class="detail">Interaction is through a fixed API; the internal architecture and logic cannot be modified by users.</span></td></tr>
-            <tr><td class="row-head">Hugging Face Transformers</td><td><span class="verdict">Open</span><span class="detail">The library and a vast ecosystem of models are fully open-source on GitHub.</span></td><td><span class="verdict">Partial</span><span class="detail">It's possible to train models, but building a complete pipeline for under $100 demands significant expertise and integration effort.</span></td><td><span class="verdict">Modular</span><span class="detail">It provides flexible building blocks (models, datasets, tokenizers, trainers) that require assembly and configuration.</span></td><td><span class="verdict">Moderate</span><span class="detail">Highly flexible and extensible for diverse applications, but the framework itself has a steep learning curve due to its generality.</span></td></tr>
-            <tr><td class="row-head">DeepSpeed/Megatron-LM</td><td><span class="verdict">Open</span><span class="detail">These frameworks are open-source, primarily used by large organizations or researchers.</span></td><td><span class="verdict">No</span><span class="detail">They are designed for training extremely large models on hundreds or thousands of GPUs, making costs prohibitive for small budgets.</span></td><td><span class="verdict">Focus: Train</span><span class="detail">Highly specialized for large-scale distributed training, typically requiring other tools for data preparation, evaluation, and deployment.</span></td><td><span class="verdict">No</span><span class="detail">Extremely complex and optimized for performance on massive clusters, not for individual developer hackability or rapid iteration.</span></td></tr>
+            <tr class="you"><td class="row-head">nanochat</td><td><span class="verdict">Yes</span><span class="detail">The entire codebase is Python, openly available under the MIT license, including model architecture and training scripts (e.g., nanochat/gpt.py, scripts/base_train.py).</span></td><td><span class="verdict">Low</span><span class="detail">Can train a GPT-2 equivalent from scratch for as little as ~$48 (~2 hours on an 8xH100 GPU node) on rented GPUs, with full pipeline guides.</span></td><td><span class="verdict">Full</span><span class="detail">Designed for end-to-end modification of all stages, from tokenization to custom optimizers and architectural tweaks.</span></td><td><span class="verdict">Moderate</span><span class="detail">Requires understanding Python, PyTorch, and distributed training concepts to fully utilize, but provides clear, simplified scripts and documentation.</span></td></tr>
+            <tr><td class="row-head">OpenAI API (GPT-4)</td><td><span class="verdict">No</span><span class="detail">Only provides API access; the model architecture, training code, and weights are proprietary and not publicly visible.</span></td><td><span class="verdict">Very High</span><span class="detail">Not designed for training from scratch; costs are per-token for inference or fine-tuning existing models, which scales quickly.</span></td><td><span class="verdict">Limited</span><span class="detail">Customization is restricted to fine-tuning existing models with your data, prompt engineering, and API parameters.</span></td><td><span class="verdict">Easy</span><span class="detail">Using the API requires basic coding skills to send requests and parse responses, abstracting away all ML complexities.</span></td></tr>
+            <tr><td class="row-head">Hugging Face Transformers</td><td><span class="verdict">Yes</span><span class="detail">The entire library is open-source, allowing full inspection and modification of models, pipelines, and trainer implementations.</span></td><td><span class="verdict">Moderate</span><span class="detail">Costs depend on chosen model size and compute resources, typically requiring cloud GPUs; smaller models can be trained on a single powerful GPU.</span></td><td><span class="verdict">High</span><span class="detail">Offers extensive configuration options for models, optimizers, schedulers, and custom training loops, often through flexible <code>Trainer</code> abstractions.</span></td><td><span class="verdict">High</span><span class="detail">Its comprehensive ecosystem, extensive API, and many abstractions (models, tokenizers, datasets, trainers) lead to a steep initial learning curve.</span></td></tr>
+            <tr><td class="row-head">Google Cloud Vertex AI</td><td><span class="verdict">Partial</span><span class="detail">You can provide your own training code, but the underlying infrastructure, base models, and managed services are proprietary and not inspectable.</span></td><td><span class="verdict">High</span><span class="detail">Costs are based on managed GPU usage and platform fees, making it expensive to train large models or fine-tune extensively.</span></td><td><span class="verdict">Some</span><span class="detail">Offers configuration for data, hyperparameters, and model deployment, but abstracts away low-level training details and infrastructure management.</span></td><td><span class="verdict">Moderate</span><span class="detail">Requires understanding cloud concepts, specific Vertex AI workflows, and data preparation, but provides a user-friendly managed platform.</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -321,13 +356,12 @@
       <div class="sec-label">What the Code Reveals<span class="scroll-hint">scroll →</span></div>
       <p class="sec-intro">Features hiding in the codebase that the README doesn't advertise. Each one is a bet about where the product is going.</p>
       <ul class="card-rail surprises">
-        <li><div class="head"><span class="num">1</span><div class="headline">LLM Python Tool Use</div></div><div class="where">nanochat/execution.py, nanochat/engine.py, tasks/gsm8k.py, tasks/humaneval.py, tasks/spellingbee.py</div><div class="body">The product is betting heavily on agentic LLMs that can use external tools to verify their own reasoning and solve complex problems, moving beyond just text generation. This is a core part of building robust AI abilities.</div></li>
-        <li><div class="head"><span class="num">2</span><div class="headline">AI-Powered Research &amp; Development</div></div><div class="where">.claude/skills/read-arxiv-paper/SKILL.md, dev/LEADERBOARD.md</div><div class="body">The project is investing in LLM-driven self-improvement and research acceleration, turning the development process itself into an LLM-assisted workflow to find novel optimizations and architectural tweaks faster.</div></li>
-        <li><div class="head"><span class="num">3</span><div class="headline">Synthetic Self-Identity Data</div></div><div class="where">dev/gen_synthetic_data.py, tasks/customjson.py</div><div class="body">Nanochat aims to explicitly imbue its models with a well-defined identity and knowledge of their own architecture/purpose, a form of self-awareness crucial for building helpful and aligned AI.</div></li>
-        <li><div class="head"><span class="num">4</span><div class="headline">Muon-AdamW Hybrid Optimizer</div></div><div class="where">nanochat/optim.py, dev/LOG.md</div><div class="body">Achieving state-of-the-art efficiency and performance at the target scale requires highly specialized, custom-tuned optimizers that go beyond standard Adam/AdamW, combining strengths of different optimization theories.</div></li>
-        <li><div class="head"><span class="num">5</span><div class="headline">Custom FP8 Training Precision</div></div><div class="where">nanochat/common.py, nanochat/gpt.py, nanochat/fp8.py, dev/LEADERBOARD.md, dev/LOG.md</div><div class="body">To maximize training efficiency on cutting-edge hardware (like H100/H200), the project requires extremely fine-grained, explicit control over numerical precision, including a custom, minimal FP8 implementation.</div></li>
-        <li><div class="head"><span class="num">6</span><div class="headline">Advanced Per-Layer Model Control</div></div><div class="where">nanochat/gpt.py (resid_lambdas, x0_lambdas, smear_gate, backout_lambda, value_embeds), dev/LOG.md</div><div class="body">The project is actively exploring and integrating advanced architectural tweaks and learnable per-layer scalars (inspired by ResFormer and modded-nanoGPT) to unlock significant performance gains, especially for smaller, compute-optimal models.</div></li>
-        <li><div class="head"><span class="num">7</span><div class="headline">Scaling Law-Driven Hyperparameters</div></div><div class="where">scripts/base_train.py, dev/LOG.md (Auto Batch Size Scaling)</div><div class="body">Nanochat is designed for a 'miniseries' of compute-optimal models. Automatic, principled scaling of hyperparameters based on current research into scaling laws ensures efficiency and performance across a range of model sizes without manual re-tuning.</div></li>
+        <li><div class="head"><span class="num">1</span><div class="headline">Sandboxed Python for tool use</div></div><div class="where">nanochat/execution.py, nanochat/engine.py, tasks/gsm8k.py, tasks/humaneval.py</div><div class="body">The product is betting on agentic LLMs that can use external tools to verify their own reasoning and execute code, not just produce plausible text. This positions it for more complex, verifiable AI applications.</div></li>
+        <li><div class="head"><span class="num">2</span><div class="headline">Custom BPE Tokenizer pipeline</div></div><div class="where">nanochat/tokenizer.py, scripts/tok_train.py, scripts/tok_eval.py</div><div class="body">Ownership of the tokenizer training and inference pipeline ensures maximal control over data compression and input representation. This is crucial for fine-tuning model performance and efficiency, especially for 'micro models' that are sensitive to tokenization details.</div></li>
+        <li><div class="head"><span class="num">3</span><div class="headline">Muon/AdamW Hybrid Optimizer</div></div><div class="where">nanochat/optim.py, nanochat/gpt.py (setup_optimizer), dev/LOG.md</div><div class="body">Optimizing the training loop beyond standard AdamW with a custom, performance-oriented hybrid optimizer suggests a relentless pursuit of training efficiency and stability for state-of-the-art LLMs, even at smaller scales and across different parameter types.</div></li>
+        <li><div class="head"><span class="num">4</span><div class="headline">FP8 Training Support</div></div><div class="where">nanochat/fp8.py, scripts/base_train.py (--fp8)</div><div class="body">A commitment to leveraging the latest bleeding-edge hardware capabilities (H100+ tensor cores) to push the boundaries of training speed and cost-effectiveness, acknowledging that hardware advancements are critical for maintaining a competitive edge in LLM development.</div></li>
+        <li><div class="head"><span class="num">5</span><div class="headline">Per-layer Residual and x0 Scalars</div></div><div class="where">nanochat/gpt.py (resid_lambdas, x0_lambdas), dev/LOG.md (2026-01-11: Per-Layer Residual Scalars)</div><div class="body">Fine-grained, learnable control over information flow within the transformer allows the model to adaptively learn optimal skip connections and residual scaling. This indicates a focus on subtle architectural optimizations for maximizing model quality and learning efficiency.</div></li>
+        <li><div class="head"><span class="num">6</span><div class="headline">Internal AI Research Agent Skills</div></div><div class="where">.claude/skills/read-arxiv-paper/SKILL.md, dev/LOG.md</div><div class="body">The explicit markdown document defining a skill for an AI agent to read research papers, alongside a detailed experiment log, indicates a profound commitment to systematic, data-driven research and rapid iteration on architectural and training improvements for LLMs.</div></li>
       </ul>
     </section>
 
@@ -335,12 +369,11 @@
       <div class="sec-label">Missing on Purpose<span class="scroll-hint">scroll →</span></div>
       <p class="sec-intro">Features every competitor ships that this codebase deliberately doesn't. Strategy is choosing what not to do.</p>
       <ul class="card-rail absences">
-        <li><div class="head"><span class="num">1</span><div class="headline">No Multi-Modal Inputs/Outputs</div></div><div class="where">No image/video processing libraries, no visual/audio input types in nanochat/engine.py or tokenizer.py. Tool use is explicitly Python code.</div><div class="body">Stays laser-focused on text-based LLM training and agentic reasoning. Adding multi-modal capabilities would drastically increase complexity (data, models, compute, evaluation) and diverge from the 'minimal/hackable' philosophy. Risk: falls behind competitors offering visual or audio understanding.</div></li>
-        <li><div class="head"><span class="num">2</span><div class="headline">No Real-time Web Access</div></div><div class="where">nanochat/execution.py warns about network access but doesn't implement it as a feature for the LLM. No built-in web scraping or external API integration for the LLM itself.</div><div class="body">Prioritizes in-context knowledge and learned reasoning over real-time factual retrieval. This simplifies inference, reduces latency, and avoids the complexities and costs of RAG or dynamic API integrations. Risk: LLM's knowledge becomes stale, cannot answer current events or dynamic queries.</div></li>
-        <li><div class="head"><span class="num">3</span><div class="headline">No User-Facing Analytics Dashboard</div></div><div class="where">wandb is used for developer experiment tracking (scripts/base_train.py), not for user-facing metrics. scripts/chat_web.py offers only basic worker pool stats.</div><div class="body">Focuses on being an 'experimental harness' and 'hackable codebase' for LLM training, not a production-ready SaaS chat platform. Avoiding user-centric analytics reduces complexity, database requirements, and privacy burdens. Risk: not suitable for direct deployment as a commercial service without significant additional development.</div></li>
-        <li><div class="head"><span class="num">4</span><div class="headline">No User Plugin System</div></div><div class="where">While internal Python tool use exists (nanochat/engine.py), there's no public API or framework (like OpenAI's plugins or LangChain agents) for end-users to extend nanochat's capabilities with external services or custom code.</div><div class="body">Keeps the system self-contained and controlled, reducing the attack surface and complexity of managing third-party code. This aligns with the 'minimal, cohesive, hackable' philosophy. Risk: Limits extensibility and ecosystem growth compared to platforms with rich plugin ecosystems.</div></li>
-        <li><div class="head"><span class="num">5</span><div class="headline">No Multi-Tenancy or User Auth</div></div><div class="where">scripts/chat_web.py is a single-user UI without user accounts, authentication, authorization, or isolation of user data/models. All requests are handled by a shared pool of workers.</div><div class="body">Simplifies the architecture significantly, focusing entirely on core LLM training and inference. Building a secure multi-tenant system adds enormous complexity (database schema, API keys, access control, resource allocation). Risk: Not production-ready for multi-user deployments; lacks security and data separation.</div></li>
-        <li><div class="head"><span class="num">6</span><div class="headline">No Enterprise Data Governance</div></div><div class="where">Data handling (nanochat/dataset.py, tasks/) focuses on datasets for training/evaluation. No features for GDPR-like data deletion, auditing, anonymization services, or role-based access control within the data lifecycle.</div><div class="body">Streamlines data processing for research and development. Implementing robust data governance and access control mechanisms is a significant undertaking, often requiring legal and compliance overhead, which is outside the scope of an 'experimental harness'. Risk: Not suitable for sensitive or regulated data environments without substantial additional effort.</div></li>
+        <li><div class="head"><span class="num">1</span><div class="headline">No Graphical User Interface (GUI)</div></div><div class="where">No nanochat/web.py or ui directories, only CLI scripts like scripts/chat_cli.py</div><div class="body">Stays lean and focused on core model development and research workflows via CLI. This avoids the significant overhead of UI development, maintenance, and deployment complexity inherent in user-facing applications.</div></li>
+        <li><div class="head"><span class="num">2</span><div class="headline">No Multi-User / Multi-Tenancy</div></div><div class="where">No user or organization tables, no API keys for individual users, no authorization checks in code</div><div class="body">Prioritizes simplicity and single-researcher iteration. Avoids the security, data isolation, and operational overhead of managing multiple users, allowing the team to focus purely on LLM capabilities.</div></li>
+        <li><div class="head"><span class="num">3</span><div class="headline">No Comprehensive Cloud Deployment</div></div><div class="where">README.md suggests 'Boot up a new 8XH100 GPU box from your favorite provider,' implying manual setup. No cloud-specific APIs (AWS, GCP, Azure).</div><div class="body">Keeps the platform infrastructure-agnostic and minimal, giving researchers flexibility to choose their compute environment. Avoids vendor lock-in and the complexity of maintaining cloud-specific integrations.</div></li>
+        <li><div class="head"><span class="num">4</span><div class="headline">No Real-time Prompt Engineering UI</div></div><div class="where">scripts/chat_cli.py is a simple console interface; scripts/chat_sft.py takes CLI args, not interactive input.</div><div class="body">Maintains a code-centric workflow favored by researchers for reproducibility and version control. Avoids the design and implementation effort of an interactive, visually rich development environment, keeping focus on core training logic.</div></li>
+        <li><div class="head"><span class="num">5</span><div class="headline">No Custom Metrics Dashboards</div></div><div class="where">wandb is a core dependency (pyproject.toml), scripts/base_train.py logs extensively to wandb_run. No custom nanochat/dashboard.py or /metrics API.</div><div class="body">Delegates comprehensive metrics visualization and logging to a specialized third-party tool. This allows nanochat to focus on the core LLM training and evaluation logic without reinventing monitoring infrastructure.</div></li>
       </ul>
     </section>
 

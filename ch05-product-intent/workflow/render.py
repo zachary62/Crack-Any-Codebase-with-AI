@@ -44,6 +44,27 @@ HTML_TEMPLATE = """<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  // Disable auto-run synchronously so our loop controls rendering (see ch06).
+  if (window.mermaid) mermaid.initialize({{ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' }});
+</script>
+<script>
+  window.addEventListener('load', async function () {{
+    if (!window.mermaid) return;
+    var blocks = document.querySelectorAll('pre.mermaid');
+    for (var i = 0; i < blocks.length; i++) {{
+      var el = blocks[i], src = el.textContent;
+      try {{
+        // Validate first, so a diagram the model got wrong is dropped silently
+        // (no "Syntax error" box) instead of rendered.
+        if ((await mermaid.parse(src, {{ suppressErrors: true }})) === false) {{ el.remove(); continue; }}
+        var out = await mermaid.render('mmd' + i, src);
+        el.innerHTML = out.svg;
+      }} catch (e) {{ el.remove(); }}
+    }}
+  }});
+</script>
 <style>
   :root {{
     --bg: #f8fafc;
@@ -173,6 +194,14 @@ HTML_TEMPLATE = """<!doctype html>
     color: var(--warn-ink); text-transform: uppercase; margin-bottom: 6px;
   }}
   .callout p {{ margin: .4em 0 0; color: #422006; font-size: .95rem; line-height: 1.65; }}
+
+  /* Counter-positioning diagram */
+  .trap-diagram {{ margin-top: 16px; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }}
+  .trap-diagram .diagram-label {{ font-size: .65rem; font-weight: 700; letter-spacing: .14em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }}
+  pre.mermaid {{ background: transparent; text-align: center; margin: 0; padding: 4px; }}
+  pre.mermaid svg {{ max-width: 100%; height: auto; }}
 
   /* Competitor matrix */
   .dim-defs {{
@@ -321,6 +350,7 @@ HTML_TEMPLATE = """<!doctype html>
         <div class="callout-label">Why incumbents can't copy this</div>
 {why_html}
       </div>
+{trap_diagram_html}
     </section>
 
     <section class="sec">
@@ -409,6 +439,14 @@ def render_html(name, shared):
     )
     why_html = md_block(positioning.get("why_incumbents_cannot_copy", ""))
 
+    diagram_src = str(positioning.get("diagram", "") or "").strip()
+    trap_diagram_html = (
+        '      <div class="trap-diagram">\n'
+        '        <div class="diagram-label">The trap, in one picture</div>\n'
+        f'        <pre class="mermaid">{diagram_src}</pre>\n'
+        '      </div>'
+    ) if diagram_src else ""
+
     present_items = "\n".join(
         f'        <li>'
         f'<div class="head"><span class="num">{i+1}</span>'
@@ -440,6 +478,7 @@ def render_html(name, shared):
         sacrifices_html=sacrifices_html,
         gains_html=gains_html,
         why_html=why_html,
+        trap_diagram_html=trap_diagram_html,
         present_items=present_items,
         absent_items=absent_items,
     )
@@ -469,6 +508,8 @@ def render_markdown(name, shared):
     parts.append("")
     parts.append("### Why incumbents can't copy this\n")
     parts.append(positioning.get("why_incumbents_cannot_copy", "").strip() + "\n")
+    if positioning.get("diagram"):
+        parts.append("```mermaid\n" + str(positioning["diagram"]).strip() + "\n```\n")
 
     parts.append("### Side by side\n")
     parts.append("**Dimensions**\n")
