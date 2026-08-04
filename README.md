@@ -53,12 +53,7 @@ cd Crack-Any-Codebase-with-AI
 **pip**
 
 ```bash
-# with requirements.txt
-pip install -r utils/requirements.txt
-```
-
-```bash
-# or with toml
+# with toml
 pip install -e .               # Anthropic Claude (default)
 pip install -e ".[openai]"     # OpenAI
 pip install -e ".[google]"     # Google Gemini
