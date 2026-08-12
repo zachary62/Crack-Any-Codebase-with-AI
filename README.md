@@ -1,3 +1,5 @@
+
+
 # Crack Any Codebase with AI
 
 Companion repo for the book **Crack Any Codebase with AI**.
@@ -74,7 +76,7 @@ For a smaller test that finishes in seconds, point Ch5 at the PocketFlow chat ex
 
 ```bash
 cd ch05-product-intent/workflow
-python main.py path/to/repo --out ../output/pocketflow-chat-prd.md
+python main.py path/to/pocketflow --out ../output/pocketflow-chat-prd.md
 ```
 
 That writes a real one page PRD: see [`ch05-product-intent/output/pocketflow-chat-prd.md`](ch05-product-intent/output/pocketflow-chat-prd.md).
@@ -94,4 +96,3 @@ from utils import call_llm, crawl
 ```
 
 `utils/call_llm.py` picks the provider based on which env var you set (Anthropic, OpenAI, or Gemini). Override with `LLM_PROVIDER=<name>` and `ANTHROPIC_MODEL` / `OPENAI_MODEL` / `GEMINI_MODEL`.
-
