@@ -4,9 +4,11 @@ Picks the provider based on which env var is set:
   ANTHROPIC_API_KEY  -> Claude (claude-sonnet-4-6)
   OPENAI_API_KEY     -> OpenAI (gpt-4o)
   GEMINI_API_KEY     -> Gemini (gemini-2.5-flash)
+  OLLAMA_HOST        -> Ollama, default http://localhost:11434 (qwen2.5-coder:32b-instruct-q3_K_M)
 
-Override the auto pick with LLM_PROVIDER=anthropic|openai|gemini.
-Override the model with ANTHROPIC_MODEL / OPENAI_MODEL / GEMINI_MODEL.
+Override the auto pick with LLM_PROVIDER=anthropic|openai|gemini|ollama.
+Override the model with ANTHROPIC_MODEL / OPENAI_MODEL / GEMINI_MODEL / OLLAMA_MODEL.
+Override the Ollama server with OLLAMA_HOST.
 
 Caching:
   Responses are cached on disk under utils/.cache/ keyed by sha256 of
@@ -36,8 +38,11 @@ def _pick():
         return "openai"
     if os.environ.get("GEMINI_API_KEY"):
         return "gemini"
+    if os.environ.get("OLLAMA_HOST"):
+        return "ollama"
     raise RuntimeError(
-        "No LLM key set. Export ANTHROPIC_API_KEY or OPENAI_API_KEY or GEMINI_API_KEY."
+        "No LLM provider found. Export ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, "
+        "or OLLAMA_HOST (e.g. http://my-local-ip:11434)."
     )
 
 
@@ -51,6 +56,7 @@ def _model_for(provider):
         "anthropic": os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
         "openai":    os.environ.get("OPENAI_MODEL", "gpt-5.1"),
         "gemini":    os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
+        "ollama":    os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:32b-instruct-q3_K_M"),
     }[provider]
 
 
@@ -121,6 +127,21 @@ def call_llm(prompt: str) -> str:
             config=types.GenerateContentConfig(max_output_tokens=max_out),
         )
         text = resp.text
+
+    elif provider == "ollama":
+        import httpx
+        host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        resp = httpx.post(
+            f"{host}/v1/chat/completions",
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": max_out,
+            },
+            timeout=300.0,
+        )
+        resp.raise_for_status()
+        text = resp.json()["choices"][0]["message"]["content"]
 
     else:
         raise RuntimeError(f"Unknown LLM_PROVIDER={provider!r}")

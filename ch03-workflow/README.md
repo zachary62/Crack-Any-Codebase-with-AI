@@ -14,8 +14,22 @@ The book chapter walks you through building this from scratch in about 100 lines
 ## Quickstart
 
 ```bash
-pip install -r ../utils/requirements.txt
-export GEMINI_API_KEY=...   # or ANTHROPIC_API_KEY / OPENAI_API_KEY
+# From the repo root — install once for all chapters.
+# Pick the provider you want to use:
+pip install -e .               # Anthropic (default)
+pip install -e ".[openai]"     # OpenAI
+pip install -e ".[google]"     # Gemini
+
+# Or with uv:
+uv sync                        # Anthropic (default)
+uv sync --extra openai
+uv sync --extra google
+
+# Export the matching key:
+export ANTHROPIC_API_KEY=...
+# export OPENAI_API_KEY=...
+# export GEMINI_API_KEY=...
+# export OLLAMA_HOST=http://localhost:11434   # local Ollama, no key needed
 
 cd workflow
 python main.py path/to/repo

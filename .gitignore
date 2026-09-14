@@ -21,3 +21,6 @@ utils/.cache/
 # Temp dumps from running the chapters
 *.dump.txt
 *-dump.txt
+
+# Exclude output directories from source control
+*/output/
